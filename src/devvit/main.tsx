@@ -137,6 +137,17 @@ Devvit.addCustomPostType({
           resizeMode="cover"
         />
       <vstack alignment="center" gap="none" padding="large" grow>
+          <vstack width={'100%'} height={'30%'} alignment="bottom center" gap="medium">
+            <image
+              url="bolt.png"
+              description="Loading..."
+              height={'70px'}
+              width={'70px'}
+              imageHeight={'240px'}
+              imageWidth={'240px'}
+              onPress={() => context.ui.navigateTo('https://bolt.new/')}
+            />
+          </vstack>
           {/* Title section */}
           <vstack width={'100%'} height={'30%'} alignment="top center">
             <image
@@ -146,6 +157,7 @@ Devvit.addCustomPostType({
               width={'140px'}
               imageHeight={'240px'}
               imageWidth={'240px'}
+              
             />
           </vstack>
           <vstack height="30%" alignment="middle center" gap="medium">
