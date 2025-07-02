@@ -17,6 +17,12 @@ export type Question = {
   questionType?: QuestionType; // NEW: Type of question
 };
 
+export type QuestionStats = {
+  questionId: string;
+  cardStats: Record<string, number>; // cardId -> count
+  totalResponses: number;
+};
+
 export type Deck = {
   id: string;
   title: string;
@@ -25,6 +31,7 @@ export type Deck = {
   flairText?: string;  
   flairCSS?: string;
   questions: Question[];
+  questionStats?: QuestionStats[]; // NEW: Stats for each question
   
   createdBy: string;
   createdAt: number;
@@ -51,11 +58,7 @@ export type PlayerSession = {
   finishedAt?: number;
 };
 
-export type QuestionStats = {
-  questionId: string;
-  cardStats: Record<string, number>; // cardId -> count
-  totalResponses: number;
-};
+
 
 export type LeaderboardEntry = {
   userId: string;
@@ -111,7 +114,6 @@ export type BlocksToWebviewMessage = {
     userId: string;
     username: string;
     playerRank: number | null;
-    allQuestionStats?: QuestionStats[] | null;
     // authorId: string;
     // userId : string;
     // authorName: string;

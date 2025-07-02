@@ -9,6 +9,7 @@ interface DeckData {
   customTheme: string;
   flairCSS: string;
   questions: Question[];
+  questionStats: [], // Added
 }
 
 interface CreateDeckWizardProps {
@@ -32,6 +33,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
     flairCSS: 'battles-flair',
     customTheme: '',
     questions: [],
+    questionStats: [], // Added
   });
 
   // Helper function to generate unique card IDs

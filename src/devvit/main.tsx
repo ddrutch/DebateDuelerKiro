@@ -71,7 +71,6 @@ Devvit.addCustomPostType({
                 playerRank: playerRank,
                 userId : context.userId!,
                 username: await context.reddit.getCurrentUsername() || 'Anonymous',
-                allQuestionStats: allQuestionStats || null,
               },
             });
             break;
@@ -125,60 +124,72 @@ Devvit.addCustomPostType({
       },
     });
 
-    return (
-      <zstack width="100%" height="100%" alignment="center middle">
+return (
+  <zstack width="100%" height="100%" alignment="center middle">
+    {/* Background */}
+    <image
+      imageHeight={1024}
+      imageWidth={1500}
+      height="100%"
+      width="100%"
+      url="background2.png"
+      description="Striped blue background"
+      resizeMode="cover"
+    />
+
+    {/* Bolt badge in top‑right, smaller */}
+    <zstack
+      width="100%"
+      height="100%"
+      alignment="top center"
+      padding="small"
+    >
+      <image
+        url="bolt.png"
+        description="Bolt badge"
+        width="50px"
+        height="50px"
+        imageWidth="150px"
+        imageHeight="150px"
+        onPress={() => context.ui.navigateTo("https://bolt.new/")}
+      />
+    </zstack>
+
+    <vstack alignment="center" gap="none" padding="large" grow>
+      {/* Logo */}
+      <vstack width="100%" height="30%" alignment="top center">
         <image
-          imageHeight={1024}
-          imageWidth={1500}
-          height="100%"
-          width="100%"
-          url="background2.png"
-          description="Striped blue background"
-          resizeMode="cover"
+          url="logo.png"
+          description="Logo"
+          height="140px"
+          width="140px"
+          imageHeight="240px"
+          imageWidth="240px"
         />
-      <vstack alignment="center" gap="none" padding="large" grow>
-          <vstack width={'100%'} height={'30%'} alignment="bottom center" gap="medium">
-            <image
-              url="bolt.png"
-              description="Loading..."
-              height={'70px'}
-              width={'70px'}
-              imageHeight={'240px'}
-              imageWidth={'240px'}
-              onPress={() => context.ui.navigateTo('https://bolt.new/')}
-            />
-          </vstack>
-          {/* Title section */}
-          <vstack width={'100%'} height={'30%'} alignment="top center">
-            <image
-              url="logo.png"
-              description="Loading..."
-              height={'140px'}
-              width={'140px'}
-              imageHeight={'240px'}
-              imageWidth={'240px'}
-              
-            />
-          </vstack>
-          <vstack height="30%" alignment="middle center" gap="medium">
-            <text size="xxlarge" weight="bold" outline = "thick">{}</text>
-          </vstack>
-          
-          {/* Main content section */}
-          <vstack height="70%" alignment="center" grow>
-            {/* Button row */}
-            <vstack height="40%" alignment="bottom center" gap="medium">
-              <HeroButton
-                label="Play the game!"
-                onPress={() => {mount();}}
-                animated={true}
-              />
-                 
-            </vstack>
-        </vstack>
       </vstack>
-      </zstack>
-    );
+
+      {/* Title / subtitle */}
+      <vstack height="30%" alignment="middle center" gap="medium">
+        <text size="xxlarge" weight="bold" outline="thick">
+          {/* your title here */}
+        </text>
+      </vstack>
+
+      {/* Old bolt slot, now HeroButton doubled in size */}
+      <vstack height="40%" alignment="bottom center" gap="medium">
+        <HeroButton
+          label="Play the game!"
+          onPress={mount}
+          animated
+          // ↑ if HeroButton supports a `size` prop, you could do size="large"
+          // otherwise give it explicit width/height styling:
+          //style={{ width: 180, height: 60 }}
+        />
+      </vstack>
+    </vstack>
+  </zstack>
+);
+
   },
 });
 

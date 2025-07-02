@@ -84,6 +84,69 @@ export const getDefaultDeck = (): Deck => ({
     }
     
   ],
+
+    questionStats: [
+    {
+      questionId: 'q1',
+      cardStats: {
+        'bear': 15,
+        'tiger': 120,
+        'elephant': 45,
+        'rhino': 20
+      },
+      totalResponses: 200
+    },
+    {
+      questionId: 'q2',
+      cardStats: {
+        'superman': 150,
+        'batman': 25,
+        'hulk': 15,
+        'thor': 10
+      },
+      totalResponses: 200
+    },
+    {
+      questionId: 'q3',
+      cardStats: {
+        'katana': 40,
+        'crossbow': 90,
+        'baseball-bat': 50,
+        'chainsaw': 20
+      },
+      totalResponses: 200
+    },
+    {
+      questionId: 'q4',
+      cardStats: {
+        'honey': 130,
+        'bread': 30,
+        'milk': 25,
+        'banana': 15
+      },
+      totalResponses: 200
+    },
+    {
+      questionId: 'q5',
+      cardStats: {
+        'talk-to-fish': 35,
+        'change-traffic-lights': 110,
+        'invisible-when-alone': 25,
+        'super-smell': 30
+      },
+      totalResponses: 200
+    },
+    {
+      questionId: 'q6',
+      cardStats: {
+        'step1': 180,
+        'step2': 170,
+        'step3': 175,
+        'step4': 165
+      },
+      totalResponses: 200
+    }
+  ]
 });
 
 export const getOperationsDeck = (): Deck => ({

@@ -9,8 +9,6 @@ import {
   ScoringMode, 
   Deck, 
   PlayerSession, 
-  //InitGameResponse,
-  //SubmitAnswerResponse,
   QuestionStats,
   PlayerAnswer 
 } from '../../shared/types/redditTypes';
@@ -19,10 +17,8 @@ type GamePhase = 'welcome' | 'playing' | 'results';
 
 export const DebateDueler: React.FC = () => {
   const LOCAL_STORAGE_KEY = 'debateDuelerState';
-
   const [gamePhase, setGamePhase] = useState<GamePhase>('welcome');
   const [deck, setDeck] = useState<Deck | null>(null);
-  const [allQuestionStats, setAllQuestionStats] = useState<QuestionStats[]>([]);
   const [playerSession, setPlayerSession] = useState<PlayerSession | null>(null);
   const [currentQuestionStats, setCurrentQuestionStats] = useState<QuestionStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +63,6 @@ export const DebateDueler: React.FC = () => {
       }
 
       console.log("player rank extracted: ", payload.playerRank);
-      setAllQuestionStats(payload.allQuestionStats || []);
       
       const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
       let useSavedState = false;
@@ -90,7 +85,6 @@ export const DebateDueler: React.FC = () => {
           localStorage.removeItem(LOCAL_STORAGE_KEY);
         }
       }
-
       setDeck(payload.deck);
       
       if (!useSavedState) {
@@ -244,13 +238,7 @@ export const DebateDueler: React.FC = () => {
         isGameComplete,
         ...(isGameComplete ? {} : { nextQuestionIndex: playerSession.currentQuestionIndex + 1 }),
       };
-
-      setAllQuestionStats(prev => {
-        // replace any old entry for this question, then append the new one
-        const filtered = prev.filter(s => s.questionId !== result.questionStats.questionId);
-        return [...filtered, result.questionStats];
-      });
-      
+   
       if (isGameComplete) {
         // Game complete - send all data to server at once
         await submitFinalResults(newLocalAnswers, newLocalScore);
@@ -384,7 +372,6 @@ export const DebateDueler: React.FC = () => {
           deck={deck}
           playerSession={displaySession!}
           onSubmitAnswer={submitAnswer}
-          allQuestionStats={allQuestionStats}
         />
       );
     

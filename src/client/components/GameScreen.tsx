@@ -11,14 +11,13 @@ interface GameScreenProps {
   deck: Deck;
   playerSession: PlayerSession;
   onSubmitAnswer: (answer: string | string[], timeRemaining: number) => Promise<SubmitAnswerResponse | undefined>;
-  allQuestionStats: QuestionStats[] | null;
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
   deck,
   playerSession,
   onSubmitAnswer,
-  allQuestionStats,
+
 }) => {
   
   const [timeRemaining, setTimeRemaining] = useState(20);
@@ -29,9 +28,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const currentQuestion = deck.questions[playerSession.currentQuestionIndex];
   const isLastQuestion = playerSession.currentQuestionIndex >= deck.questions.length - 1;
   const ANSWER_DISPLAY_MS = 3500;
-  const [selectedSequence, setSelectedSequence] = useState<string[]>([]);
+  const [sequenceOrder, setSequenceOrder] = useState<Record<string, number>>({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
 
   const [answeredQuestion, setAnsweredQuestion] = useState<Question | null>(null);
   const [answeredQuestionIndex, setAnsweredQuestionIndex] = useState(-1);
@@ -43,26 +41,50 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const TIMER_STORAGE_KEY = `debateTimer_${deck.id}_${playerSession.currentQuestionIndex}`;
 
   const getCurrentQuestionStats = (): QuestionStats | null => {
-    if (!currentQuestion || !allQuestionStats) return null;
-    return allQuestionStats.find(stats => stats.questionId === currentQuestion.id) || null;
+    if (!currentQuestion || !deck.questionStats) return null;
+    return deck.questionStats.find(stats => stats.questionId === currentQuestion.id) || null;
   };
 
-  // Sequence selection handler
+  // Sequence selection handler - tracks order
   const handleSequenceSelect = (cardId: string) => {
     if (showResults || isSubmitting) return;
     
-    if (selectedSequence.includes(cardId)) {
-      setSelectedSequence(prev => prev.filter(id => id !== cardId));
-    } else {
-      setSelectedSequence(prev => [...prev, cardId]);
+    // If card already selected, remove it
+    if (sequenceOrder[cardId]) {
+      const newOrder = {...sequenceOrder};
+      delete newOrder[cardId];
+      
+      // Reorder remaining cards
+      const ordered = Object.entries(newOrder)
+        .sort((a, b) => a[1] - b[1])
+        .map(([id], i) => [id, i + 1]);
+      
+      setSequenceOrder(Object.fromEntries(ordered));
+      return;
     }
+    
+    // Add new card to sequence
+    const currentIndex = Object.keys(sequenceOrder).length + 1;
+    setSequenceOrder(prev => ({
+      ...prev,
+      [cardId]: currentIndex
+    }));
+  };
+
+  // Submit sequence answer
+  const submitSequence = () => {
+    // Convert order mapping to sorted array
+    const sequence = Object.entries(sequenceOrder)
+      .sort((a, b) => a[1] - b[1])
+      .map(([cardId]) => cardId);
+    
+    handleSubmitAnswer(sequence, timeRemaining);
   };
 
   // Submit handler
   const handleSubmitAnswer = useCallback(async (answer: string | string[], timeLeft: number) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-
 
     const justAnsweredIndex = playerSession.currentQuestionIndex;
     const newProgress = ((justAnsweredIndex + 1) / total) * 100;
@@ -81,11 +103,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
       // Reset sequence for next question
       if (currentQuestion?.questionType === 'sequence') {
-        setSelectedSequence([]);
+        setSequenceOrder({});
       }
       
       setTimeout(() => {
-        // Only reset UI for non-last questions
         if (!result.isGameComplete) {
           setShowResults(false);
           setSelectedCardId(null);
@@ -101,7 +122,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const handleCardSelect = (cardId: string) => {
     if (showResults || isSubmitting || !currentQuestion) return;
     
-    // Default to 'multiple-choice' if undefined
     if (currentQuestion.questionType === 'sequence') {
       handleSequenceSelect(cardId);
     } else {
@@ -116,7 +136,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     const count = stats.cardStats[cardId] || 0;
     return Math.round((count / stats.totalResponses) * 100);
   };
-
 
   const getScoringModeIcon = () => {
     switch (playerSession.scoringMode) {
@@ -137,13 +156,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     return (playerSession.currentQuestionIndex / total) * 100;
   };
 
-
   const progressPercentage = getProgressPercentage();
+  
   // Timer effect
   useEffect(() => {
     if (showResults || !currentQuestion) return;
     
-    // Clear any existing timer
     if (timerRef.current) clearInterval(timerRef.current);
     
     setTimeRemaining(currentQuestion.timeLimit);
@@ -152,14 +170,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       setTimeRemaining(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current as NodeJS.Timeout);
-          // Handle timeout logic...
+          // Auto-submit if time runs out
+          if (currentQuestion.questionType === 'sequence' && Object.keys(sequenceOrder).length > 0) {
+            submitSequence();
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     
-    // Save timer state on cleanup
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -173,7 +193,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     if (showResults) {
       const targetScore = playerSession.totalScore;
       const startScore = targetScore - lastScore;
-      const duration = 750; // 0.75 seconds
+      const duration = 750;
       const startTime = Date.now();
       
       const animateScore = () => {
@@ -211,12 +231,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       
       return () => {
         clearInterval(interval);
-        // Reset progress when effect cleans up
         setCountdownProgress(0);
       };
     }
   }, [showResults, isLastQuestion]);
-
 
   return (
     <div className="h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex flex-col overflow-hidden">
@@ -291,7 +309,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               {isLastQuestion ? 'Final Question Complete!' : 'Next question...'}
             </div>
             
-            {/* Countdown progress bar - integrated at bottom */}
             {!isLastQuestion && (
               <div className="absolute bottom-0 left-0 right-0 h-1 bg-transparent rounded-b-lg overflow-hidden">
                 <div 
@@ -314,64 +331,73 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         {displayQuestion?.questionType === 'sequence' ? (
           // Sequence question UI
           <div className="flex flex-col gap-4">
-            {/* Selected sequence */}
+            {/* Selected sequence with order indicators */}
             <div className="min-h-[60px] bg-white/10 border border-white/20 rounded-lg p-3">
               <h3 className="text-blue-200 text-center mb-2">Your Sequence:</h3>
               <div className="flex flex-wrap gap-2 justify-center">
-                {selectedSequence.map((cardId, index) => {
-                  const card = displayQuestion?.cards.find(c => c.id === cardId);
-                  return card ? (
-                    <div 
-                      key={index}
-                      className="flex items-center bg-purple-600/50 border border-purple-400 rounded-full px-3 py-1"
-                    >
-                      <span className="text-white mr-2 font-bold">{index + 1}.</span>
-                      <span className="text-white">{card.text}</span>
-                      <button 
-                        onClick={() => handleSequenceSelect(cardId)}
-                        className="ml-2 text-red-300 hover:text-red-100"
+                {Object.entries(sequenceOrder)
+                  .sort((a, b) => a[1] - b[1])
+                  .map(([cardId, order]) => {
+                    const card = displayQuestion?.cards.find(c => c.id === cardId);
+                    return card ? (
+                      <div 
+                        key={cardId}
+                        className="flex items-center bg-purple-600/50 border border-purple-400 rounded-full px-3 py-1"
                       >
-                        ×
-                      </button>
-                    </div>
-                  ) : null;
-                })}
+                        <span className="text-white mr-2 font-bold">{order}.</span>
+                        <span className="text-white">{card.text}</span>
+                        <button 
+                          onClick={() => handleSequenceSelect(cardId)}
+                          className="ml-2 text-red-300 hover:text-red-100"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : null;
+                  })}
               </div>
             </div>
 
-            {/* Available cards */}
+            {/* Available cards with order indicators */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-[clamp(.25rem,1vw,.5rem)]">
-              {displayQuestion.cards
-                .filter(card => !selectedSequence.includes(card.id))
-                .map(card => (
+              {displayQuestion.cards.map(card => {
+                const order = sequenceOrder[card.id];
+                return (
                   <button
                     key={card.id}
                     onClick={() => handleSequenceSelect(card.id)}
                     disabled={showResults || isSubmitting}
-                    className="
-                      relative flex items-center justify-between w-full
+                    className={`
+                      relative flex items-center justify-center w-full
                       min-h-[clamp(5rem,12vw,7rem)]
                       p-[clamp(1rem,2.5vw,2.2rem)]
                       rounded-xl border-2 overflow-hidden transition-all
                       border-white/50 bg-white/10 hover:bg-white/20 active:scale-[0.98]
                       disabled:opacity-50
-                    "
+                      ${sequenceOrder[card.id] ? 'border-purple-400 bg-purple-500/20' : ''}
+                    `}
                   >
+                    {order && (
+                      <div className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center bg-purple-500 rounded-full text-white font-bold">
+                        {order}
+                      </div>
+                    )}
                     <span
-                      className="relative flex-1 font-semibold text-left
+                      className="relative flex-1 font-semibold text-center
                                  text-[clamp(1.25rem,3vw,1.75rem)] text-white"
                     >
                       {card.text}
                     </span>
                   </button>
-                ))}
+                );
+              })}
             </div>
             
             {/* Submit button for sequence */}
-            {selectedSequence.length > 0 && !showResults && (
+            {Object.keys(sequenceOrder).length > 0 && !showResults && (
               <div className="mt-2 flex justify-center">
                 <button
-                  onClick={() => handleSubmitAnswer(selectedSequence, timeRemaining)}
+                  onClick={submitSequence}
                   disabled={isSubmitting}
                   className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all disabled:opacity-50"
                 >
@@ -381,7 +407,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             )}
           </div>
         ) : (
-          // Multiple choice UI
+          // Multiple choice UI (unchanged)
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-[clamp(.25rem,1vw,.5rem)]">
             {displayQuestion?.cards.map((card) => {
               const isSelected = selectedCardId === card.id;
