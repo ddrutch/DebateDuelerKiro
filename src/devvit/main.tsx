@@ -2,19 +2,20 @@ import { Devvit, Post, useWebView } from '@devvit/public-api';
 import { BlocksToWebviewMessage, WebviewToBlockMessage } from '../shared/types/redditTypes';
 import { createRedisService } from './redisService';
 import { createNewPost as createNewPostUtil } from './createNewPost';
-import '../server/index';
+// import '../server/index';
 import { defineConfig } from '@devvit/server';
 import { getDefaultDeck } from '../server/core/decks';
 import { Preview } from './Preview';
 import { Question } from '../shared/types/redditTypes';
 import { HeroButton } from './components/HeroButton';
 
-defineConfig({
-  name: '[Bolt] Debate Dueler',
-  entry: 'index.html',
-  height: 'tall',
-  menu: { enable: false },
-});
+
+// defineConfig({
+//   name: '[Bolt] Debate Dueler',
+//   entry: 'index.html',
+//   height: 'tall',
+//   menu: { enable: false },
+// });
 
 
 Devvit.addMenuItem({
@@ -52,10 +53,7 @@ Devvit.addCustomPostType({
         const playerSession = await redisService.getPlayerSession(context.postId!, context.userId!);
         const leaderboard = await redisService.getLeaderboard(context.postId!);
         const playerRank = await redisService.getPlayerRank(context.postId!, context.userId!);
-        const allQuestionStats = await redisService.getQuestionStats(context.postId!, deck);
-        const graphicUsername = await context.reddit.getCurrentUsername();
 
-        
         if (deck == defaultDeck) {
           await redisService.saveDeck(context.postId!, defaultDeck);
         }
@@ -178,7 +176,7 @@ return (
       {/* Old bolt slot, now HeroButton doubled in size */}
       <vstack height="40%" alignment="bottom center" gap="medium">
         <HeroButton
-          label="Play the game!"
+          label="Play the game!!"
           onPress={mount}
           animated
           // ↑ if HeroButton supports a `size` prop, you could do size="large"

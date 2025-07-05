@@ -19,7 +19,7 @@ export const HeroButton = (props: HeroButtonProps): JSX.Element => {
         width="246px"
         url={
           props.animated
-            ? 'button.gif'
+            ? 'butt.gif'
             : `data:image/svg+xml,
           <svg width="246" height="64" viewBox="0 0 246 64" xmlns="http://www.w3.org/2000/svg">
           <path d="M242 16H20V20H16V60H20V64H242V60H246V20H242V16Z" fill="rgba(0,0,0,0.3)}"/>

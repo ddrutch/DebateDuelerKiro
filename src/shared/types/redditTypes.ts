@@ -20,6 +20,7 @@ export type Question = {
 export type QuestionStats = {
   questionId: string;
   cardStats: Record<string, number>; // cardId -> count
+  positionStats?: Record<string, Record<number, number>>; // New: Position-specific counts
   totalResponses: number;
 };
 
@@ -114,21 +115,8 @@ export type BlocksToWebviewMessage = {
     userId: string;
     username: string;
     playerRank: number | null;
-    // authorId: string;
-    // userId : string;
-    // authorName: string;
-    // posterName: string;
   };
-  } |
-  // {
-  //   type: "GIVE_PLAYER_DATA";
-  //   payload: { 
-  //     userName : string;
-  //     userAvatar : string;
-  //     playerData : GameUserData 
-  //   };
-  // } |
-  {
+  } | {
     type : "CONFIRM_SAVE_PLAYER_DATA"
     payload : { isSaved : boolean}
   } | {
@@ -137,13 +125,10 @@ export type BlocksToWebviewMessage = {
       leaderboard: LeaderboardEntry[];
       playerRank: number | null;
       playerScore: number | null;
-    }
   }
- ;
+};
 
 export type DevvitMessage = {
   type: "devvit-message";
   data: { message: BlocksToWebviewMessage };
 };
-
-

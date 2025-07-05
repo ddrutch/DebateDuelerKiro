@@ -29,7 +29,6 @@ export type RedisService = {
     saveUserGameData: (postId: string, userId: string, answers: PlayerAnswer[], totalScore: number, sessionData : PlayerSession) => Promise<void>;
     getPlayerRank: (postId: string, userId: string) => Promise<number | null>;
     getPlayerSession: (postId: string, userId: string) => Promise<PlayerSession | null>;
-    getQuestionStats: (postId: string, deck : Deck) => Promise<QuestionStats[] | null>;
 
     //post
     getDeck: (postId: string) => Promise<Deck | null>;
@@ -37,6 +36,8 @@ export type RedisService = {
 
     //utils
     addQuestionToDeck: (postId: string, question: Question) => Promise<void>;
+
+
 }
 
 
@@ -156,59 +157,47 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
 
         saveUserGameData: async (postId: string, userId: string, answers: PlayerAnswer[], totalScore: number, session : PlayerSession) => {
             try {
-                // 1. Get player session
-                // const sessionData = await redis.get(getPlayerSessionKey(postId, userId));
-                // if (!sessionData) {
-                //     console.error(`No session found for user ${userId} on post ${postId}`);
-                //     return;
-                // }
-                // const session: PlayerSession = JSON.parse(sessionData);
-
-                // 2. Get deck
-                const deckData = await redis.get(getDeckKey(postId));
-                if (!deckData) {
+                    const deckKey = getDeckKey(postId);
+                    const deckData = await redis.get(deckKey);
+                    if (!deckData) {
                     console.error(`No deck found for post ${postId}`);
                     return;
-                }
-                const deck: Deck = JSON.parse(deckData);
+                    }
+                    const deck: Deck = JSON.parse(deckData);
 
-                // 3. Process all answers and calculate accurate scores
-                let finalScore = 0;
-                
-                for (const answer of answers) {
+                    let finalScore = 0;
+                    
+                    for (const answer of answers) {
                     const question = deck.questions.find(q => q.id === answer.questionId);
                     if (!question) continue;
 
-                    // Record answer in stats
-                    const statsKey = getQuestionStatsKey(postId, question.id);
+                    // Find or create stats for this question
+                    if (!deck.questionStats) deck.questionStats = [];
+                    let questionStats = deck.questionStats.find(s => s.questionId === question.id);
                     
-                    // Increment total responses
-                    await redis.incrBy(`${statsKey}:total`, 1);
+                    if (!questionStats) {
+                        questionStats = {
+                        questionId: question.id,
+                        cardStats: {},
+                        totalResponses: 0
+                        };
+                        deck.questionStats.push(questionStats);
+                    }
                     
-                    // Record answer
+                    // Update stats
+                    questionStats.totalResponses++;
+                    
                     if (typeof answer.answer === 'string') {
-                        await redis.hIncrBy(statsKey, answer.answer, 1);
+                        questionStats.cardStats[answer.answer] = 
+                        (questionStats.cardStats[answer.answer] || 0) + 1;
                     } else {
                         for (const cardId of answer.answer) {
-                            await redis.hIncrBy(statsKey, cardId, 1);
+                        questionStats.cardStats[cardId] = 
+                            (questionStats.cardStats[cardId] || 0) + 1;
                         }
                     }
 
-                    // Get updated stats for scoring
-                    const totalResponses = parseInt(await redis.get(`${statsKey}:total`) || "0");
-                    const cardStatsRaw = await redis.hGetAll(statsKey);
-                    const cardStats: Record<string, number> = {};
-                    for (const [cardId, count] of Object.entries(cardStatsRaw)) {
-                        cardStats[cardId] = parseInt(count as string) || 0;
-                    }
-                    
-                    const questionStats: QuestionStats = {
-                        questionId: question.id,
-                        cardStats,
-                        totalResponses,
-                    };
-
-                    // Calculate score with real community data
+                    // Calculate score
                     const questionScore = calculateScoreForQuestion({
                         scoringMode: session.scoringMode,
                         question,
@@ -219,6 +208,9 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
 
                     finalScore += questionScore;
                 }
+                // Save updated deck with new stats
+                await redis.set(deckKey, JSON.stringify(deck));
+                //await redis.set(getDeckKey(postId), JSON.stringify(deck));
 
                 // 4. Update session to finished state
                 const finishedSession: PlayerSession = {
@@ -328,22 +320,28 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
                 
                 // 4. Add to deck
                 deck.questions.push(newQuestion);
+
+                // Initialize stats array if needed
+                if (!deck.questionStats) {
+                    deck.questionStats = [];
+                }
                 
-                // 5. Save updated deck
-                await redis.set(deckKey, JSON.stringify(deck));
+                // Create new stats entry
+                const newStats: QuestionStats = {
+                    questionId: newQuestion.id,
+                    cardStats: {},
+                    totalResponses: 0
+                };
                 
-                // 6. Initialize stats for the new question
-                const statsKey = getQuestionStatsKey(postId, newQuestion.id);
-                
-                // Create an object with all card fields set to '0'
-                const fieldValues: Record<string, string> = {};
+                // Initialize card stats
                 newQuestion.cards.forEach(card => {
-                    fieldValues[card.id] = '0';
+                    newStats.cardStats[card.id] = 0;
                 });
                 
-                // Set all fields at once
-                await redis.hset(statsKey, fieldValues);
-                await redis.set(`${statsKey}:total`, '0');
+                deck.questionStats.push(newStats);
+                
+                // Save updated deck
+                await redis.set(deckKey, JSON.stringify(deck));
                 
                 console.log(`Added question ${newQuestion.id} to deck for post ${postId}`);
             } catch (error) {
@@ -383,39 +381,10 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
             console.log(`Saved deck for post ${postId}`);
         },
 
-
         getDeck: async (postId: string): Promise<Deck | null> => {
             const deckData = await redis.get(getDeckKey(postId));
             return deckData ? JSON.parse(deckData) as Deck : null;
-        },
-
-        getQuestionStats: async (postId: string, deck: Deck): Promise<QuestionStats[]> => {
-            const statsPromises = deck.questions.map(async (question) => {
-                const statsKey = getQuestionStatsKey(postId, question.id);
-                const totalResponses = await redis.get(`${statsKey}:total`);
-                const cardStatsRaw = await redis.hGetAll(statsKey);
-                
-                if (!totalResponses || Object.keys(cardStatsRaw).length === 0) {
-                    return null; // Skip if no stats available
-                }
-                
-                const cardStats: Record<string, number> = {};
-                for (const [cardId, count] of Object.entries(cardStatsRaw)) {
-                    cardStats[cardId] = parseInt(count) || 0;
-                }
-                
-                return {
-                    questionId: question.id,
-                    cardStats,
-                    totalResponses: parseInt(totalResponses),
-                };
-            });
-
-            const statsArray = await Promise.all(statsPromises);
-            return statsArray.filter((stats): stats is QuestionStats => stats !== null);
-        },
-
-        
+        },    
     }
 
 };

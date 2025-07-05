@@ -9,7 +9,6 @@ import {
   ScoringMode, 
   Deck, 
   PlayerSession, 
-  QuestionStats,
   PlayerAnswer 
 } from '../../shared/types/redditTypes';
 
@@ -20,7 +19,6 @@ export const DebateDueler: React.FC = () => {
   const [gamePhase, setGamePhase] = useState<GamePhase>('welcome');
   const [deck, setDeck] = useState<Deck | null>(null);
   const [playerSession, setPlayerSession] = useState<PlayerSession | null>(null);
-  const [currentQuestionStats, setCurrentQuestionStats] = useState<QuestionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,15 +53,12 @@ export const DebateDueler: React.FC = () => {
     }
   }, [initResponse]);
   
-
   const handleInitResponse = (payload: any) => {
     try {
       if (!payload || !payload.deck) {
         throw new Error('Invalid initialization data');
       }
-
       console.log("player rank extracted: ", payload.playerRank);
-      
       const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
       let useSavedState = false;
       
@@ -76,7 +71,7 @@ export const DebateDueler: React.FC = () => {
             setPlayerSession(parsedState.playerSession);
             setLocalAnswers(parsedState.localAnswers);
             setLocalScore(parsedState.localScore);
-            setCurrentQuestionStats(parsedState.currentQuestionStats);
+            //setCurrentQuestionStats(parsedState.currentQuestionStats);
           } else {
             localStorage.removeItem(LOCAL_STORAGE_KEY);
           }
@@ -120,11 +115,11 @@ export const DebateDueler: React.FC = () => {
         playerSession,
         localAnswers,
         localScore,
-        currentQuestionStats
+        //currentQuestionStats
       };
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
     }
-  }, [gamePhase, playerSession, deck, localAnswers, localScore, currentQuestionStats]);
+  }, [gamePhase, playerSession, deck, localAnswers, localScore]);
 
   useEffect(() => {
     if (gamePhase === 'results') {
@@ -254,17 +249,17 @@ export const DebateDueler: React.FC = () => {
           totalScore: newLocalScore,
         } : null);
         
-        // Show temporary results
-        setCurrentQuestionStats({
-          questionId: currentQuestion.id,
-          cardStats: {},
-          totalResponses: 0,
-        });
+        // // Show temporary results
+        // setCurrentQuestionStats({
+        //   questionId: currentQuestion.id,
+        //   cardStats: {},
+        //   totalResponses: 0,
+        // });
         
-        // Small delay before next question
-        setTimeout(() => {
-          setCurrentQuestionStats(null);
-        }, 2000);
+        // // Small delay before next question
+        // setTimeout(() => {
+        //   setCurrentQuestionStats(null);
+        // }, 2000);
       }
       return result
       ;
@@ -306,7 +301,7 @@ export const DebateDueler: React.FC = () => {
     clearTimerStorage();
     localStorage.removeItem(LOCAL_STORAGE_KEY);
     setPlayerSession(null);
-    setCurrentQuestionStats(null);
+    //setCurrentQuestionStats(null);
     setLocalAnswers([]);
     setLocalScore(0);
     setGamePhase('welcome');
@@ -318,7 +313,7 @@ export const DebateDueler: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading Debate Dueler...</p>
+          <p className="text-white text-lg">Loading Debate Dueler 1111...</p>
         </div>
       </div>
     );
