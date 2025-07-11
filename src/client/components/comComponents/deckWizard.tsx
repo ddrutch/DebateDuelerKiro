@@ -15,9 +15,10 @@ interface DeckData {
 interface CreateDeckWizardProps {
   onClose: () => void;
   onSubmit: (deck: Deck) => void;
+  username: string; // Add this line
 }
 
-export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onSubmit }) => {
+export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onSubmit, username }) => {
   const [step, setStep] = useState(1);
   const [questionCount, setQuestionCount] = useState(5);
   const [errors, setErrors] = useState({
@@ -140,7 +141,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
         flairCSS: safeFlair.cssClass,
         questions: deck.questions,
         flairText: deck.title.trim(),
-        createdBy: 'User',
+        createdBy: username ,
         createdAt: Date.now(),
         id: `deck_${Date.now()}`,
       };

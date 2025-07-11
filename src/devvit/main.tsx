@@ -2,7 +2,6 @@ import { Devvit, Post, useWebView } from '@devvit/public-api';
 import { BlocksToWebviewMessage, WebviewToBlockMessage } from '../shared/types/redditTypes';
 import { createRedisService } from './redisService';
 import { createNewPost as createNewPostUtil } from './createNewPost';
-// import '../server/index';
 import { defineConfig } from '@devvit/server';
 import { getDefaultDeck } from '../server/core/decks';
 import { Preview } from './Preview';
@@ -40,10 +39,7 @@ Devvit.addCustomPostType({
   name: 'Dueler',
   height: 'tall',
   render:  (context) => { 
-    const grapuser = context.reddit.getCurrentUsername() || 'Anonymous';
     const { mount } = useWebView<WebviewToBlockMessage, BlocksToWebviewMessage>({
-    
-      
       onMessage: async (event, { postMessage }) => {
         console.log('Received message', event);
         const data = event as unknown as WebviewToBlockMessage;
@@ -93,7 +89,7 @@ Devvit.addCustomPostType({
                 payload: { isSaved: true }
               });
             }
-            break;
+          break;
           case 'GET_LEADERBOARD_DATA': 
             postMessage({
               type: 'GIVE_LEADERBOARD_DATA',
@@ -103,7 +99,7 @@ Devvit.addCustomPostType({
                 playerScore: null,
               },
             })
-            break;
+          break;
           case 'ADD_QUESTION':
             if (context.postId) {
               const username = await context.reddit.getCurrentUsername() || 'Anonymous';
@@ -113,8 +109,28 @@ Devvit.addCustomPostType({
               };
               await redisService.addQuestionToDeck(context.postId, question);
             }
-            break;
+          break;
+          case 'GET_POST_DATA':
+            if (context.postId) {
+              const gotDeck = await redisService.getDeck(context.postId!) || defaultDeck;
+              const gotPlayerRank = await redisService.getPlayerRank(context.postId!, context.userId!);
+              const gotPlayerSession = await redisService.getPlayerSession(context.postId!, context.userId!);
+              postMessage({
+                type: 'GIVE_POST_DATA',
+                payload : {
+                  postId: context.postId!,
+                  deck: gotDeck,
+                  playerSession: gotPlayerSession,
+                  playerRank: gotPlayerRank,
+                  userId : context.userId!,
+                  username: await context.reddit.getCurrentUsername() || 'Anonymous',
+                }
 
+    
+              })
+
+            }
+          break;
           default:
             console.error('Unknown message type', data satisfies never);
             break;
@@ -179,9 +195,6 @@ return (
           label="Play the game!!"
           onPress={mount}
           animated
-          // ↑ if HeroButton supports a `size` prop, you could do size="large"
-          // otherwise give it explicit width/height styling:
-          //style={{ width: 180, height: 60 }}
         />
       </vstack>
     </vstack>

@@ -29,6 +29,9 @@ export const DebateDueler: React.FC = () => {
   // Listen for INIT_RESPONSE from Devvit
   const initResponse = useDevvitListener('INIT_RESPONSE');
   const savedData = useDevvitListener('CONFIRM_SAVE_PLAYER_DATA');
+  const playerDataListener = useDevvitListener("GIVE_POST_DATA")
+
+
 
   useEffect(() => {
     if (savedData) {  
@@ -42,6 +45,14 @@ export const DebateDueler: React.FC = () => {
   }, [savedData]);
 
   useEffect(() => {
+    if (playerDataListener) {
+      setError(null);
+      console.log("REFRESHED DATA RECEIVED", playerDataListener);
+      handleRefreshedData(playerDataListener);
+    }
+  }, [playerDataListener]);
+
+  useEffect(() => {
     if (initResponse) {
       setError(null);
       console.log("INIT RESPONSE RECEIVED", initResponse);
@@ -52,6 +63,24 @@ export const DebateDueler: React.FC = () => {
       sendToDevvit({ type: 'INIT' });
     }
   }, [initResponse]);
+
+  // New handler for refreshed data (won't change game phase)
+  const handleRefreshedData = (payload: any) => {
+    try {
+      if (!payload || !payload.deck) {
+        throw new Error('Invalid refresh data');
+      }
+      
+      console.log("Refreshed data received", payload);
+      
+      // Only update deck and player session
+      setDeck(payload.deck);
+      setPlayerSession(payload.playerSession);
+    } catch (err) {
+      console.error('Failed to process refresh data:', err);
+    }
+  };
+
   
   const handleInitResponse = (payload: any) => {
     try {
@@ -146,7 +175,7 @@ export const DebateDueler: React.FC = () => {
       
       // Create a new player session locally
       const newSession: PlayerSession = {
-        userId: initResponse?.playerSession?.userId || 'unknown',
+        userId: initResponse?.userId || 'unknown',
         username: initResponse?.username || 'Player',
         scoringMode,
         answers: [],
@@ -183,9 +212,9 @@ export const DebateDueler: React.FC = () => {
         timestamp: Date.now(),
       };
 
-      // Calculate score locally (simplified - we'll get accurate stats at the end)
-      const baseTimeBonus = Math.max(0, timeRemaining * 5);
-      let questionScore = 50 + baseTimeBonus; // Base score + time bonus
+      // Calculate score locally
+      const baseTimeBonus = Math.max(0, timeRemaining);
+      let questionScore = 0;
       
       // For trivia mode, we can calculate exact score locally
       if (playerSession.scoringMode === 'trivia') {
@@ -210,7 +239,43 @@ export const DebateDueler: React.FC = () => {
           const card = currentQuestion.cards.find(c => c.id === cardId);
           questionScore = card?.isCorrect ? 100 + baseTimeBonus : 0;
         }
+
+      } else if (playerSession.scoringMode === 'conformist' || playerSession.scoringMode === 'contrarian') {
+      // For conformist/contrarian, we need to use stats if available
+      const questionStats = deck.questionStats?.find(s => s.questionId === currentQuestion.id);
+      
+      if (questionStats && questionStats.totalResponses > 0) {
+        if (currentQuestion.questionType === 'sequence') {
+          const sequence = answer as string[];
+          let totalPct = 0;
+          
+          sequence.forEach(cardId => {
+            const count = questionStats.cardStats[cardId] || 0;
+            totalPct += (count / questionStats.totalResponses) * 100;
+          });
+          
+          const averagePct = totalPct / sequence.length;
+          questionScore = playerSession.scoringMode === 'conformist' 
+            ? Math.round(averagePct) + baseTimeBonus 
+            : Math.round(100 - averagePct) + baseTimeBonus;
+        } else {
+          const cardId = answer as string;
+          const count = questionStats.cardStats[cardId] || 0;
+          const pct = (count / questionStats.totalResponses) * 100;
+          
+          questionScore = playerSession.scoringMode === 'conformist' 
+            ? Math.round(pct) + baseTimeBonus 
+            : Math.round(100 - pct) + baseTimeBonus;
+        }
+      } else {
+        // No stats available, use base score
+        questionScore = 50 + baseTimeBonus;
       }
+    } else {
+      // Fallback scoring
+      questionScore = 50 + baseTimeBonus;
+    }
+
 
       // Update local state
       const newLocalAnswers = [...localAnswers, answerRecord];
@@ -249,17 +314,6 @@ export const DebateDueler: React.FC = () => {
           totalScore: newLocalScore,
         } : null);
         
-        // // Show temporary results
-        // setCurrentQuestionStats({
-        //   questionId: currentQuestion.id,
-        //   cardStats: {},
-        //   totalResponses: 0,
-        // });
-        
-        // // Small delay before next question
-        // setTimeout(() => {
-        //   setCurrentQuestionStats(null);
-        // }, 2000);
       }
       return result
       ;
@@ -298,6 +352,7 @@ export const DebateDueler: React.FC = () => {
   }, [playerSession, postMessage]);
 
   const restartGame = useCallback(() => {
+    sendToDevvit( {type: 'GET_POST_DATA'})
     clearTimerStorage();
     localStorage.removeItem(LOCAL_STORAGE_KEY);
     setPlayerSession(null);
@@ -313,7 +368,7 @@ export const DebateDueler: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading Debate Dueler 1111...</p>
+          <p className="text-white text-lg">Loading Debate Dueler ...</p>
         </div>
       </div>
     );

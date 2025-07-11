@@ -418,6 +418,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
         <CreateDeckWizard
           onClose={() => setIsCreateDeckModalOpen(false)}
           onSubmit={handleCreateDeck}
+          username={playerSession.username}
         />
       )}
     </div>

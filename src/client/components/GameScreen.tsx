@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { AnswerCards } from './AnswerCards';
 import { 
   Deck, 
   PlayerSession, 
@@ -37,7 +38,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const total = deck.questions.length;
   const [progressOnResult, setProgressOnResult] = useState(0);
   const TIMER_STORAGE_KEY = `debateTimer_${deck.id}_${playerSession.currentQuestionIndex}`;
-  const displayQuestion = showResults ? answeredQuestion : currentQuestion;
+  // const displayQuestion = showResults ? answeredQuestion : currentQuestion;
+  // const displayQuestionIndex = showResults ? answeredQuestionIndex : playerSession.currentQuestionIndex;
+
+  const displayQuestion = showResults ? answeredQuestion : deck.questions[playerSession.currentQuestionIndex];
   const displayQuestionIndex = showResults ? answeredQuestionIndex : playerSession.currentQuestionIndex;
   const [correctAnswer, setCorrectAnswer] = useState<string | string[] | null>(null);
 
@@ -134,15 +138,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   // };
 
   const getCardPercentage = (cardId: string): number => {
-        const stats = getCurrentQuestionStats();
-        if (!stats || stats.totalResponses === 0) return 0;
-        const count = stats.cardStats[cardId] || 0;
-        return Math.round((count / stats.totalResponses) * 100);
+      const stats = getCurrentQuestionStats();
+      if (!stats || stats.totalResponses === 0) return 0;
+      const count = stats.cardStats[cardId] || 0;
+      return Math.round((count / stats.totalResponses) * 100);
   };
 
   const getCardCorrect = (cardId: string): boolean => {
-    if (!currentQuestion) return false;
-    return !!currentQuestion.cards.find(c => c.id === cardId && c.isCorrect);
+    if (!displayQuestion) return false;
+    return !!displayQuestion.cards.find(c => c.id === cardId && c.isCorrect);
   }
 
   const getScoringModeIcon = () => {
@@ -174,9 +178,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   // Compute correct IDs
   const correctIds = useMemo(() => {
-    if (!currentQuestion) return [];
-    return currentQuestion.cards.filter(c => c.isCorrect).map(c => c.id);
-  }, [currentQuestion]);
+    if (!displayQuestion) return [];
+    return displayQuestion.cards.filter(c => c.isCorrect).map(c => c.id);
+  }, [displayQuestion]);
 
   // Compute percentage for a card based on stats
   // const getCardPercentage = (cardId: string): number => {
@@ -187,38 +191,68 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   // };
 
   // Determine tint style
-  const getTintStyle = (cardId: string) => {
-    if (!showResults) return {};
-    const pct = getCardPercentage(cardId) / 100;
-    switch (playerSession.scoringMode) {
-      case 'trivia':
-        return { backgroundColor: correctIds.includes(cardId) ? 'rgba(0,128,0,0.2)' : 'rgba(255,0,0,0.2)' };
-      case 'conformist': {
-        const hue = 120 * pct;
-        return { backgroundColor: `hsla(${hue},50%,80%,0.6)` };
-      }
-      case 'contrarian': {
-        const hue = 120 * (1 - pct);
-        return { backgroundColor: `hsla(${hue},50%,80%,0.6)` };
-      }
-      default:
-        return {};
+const getTintStyle = (cardId: string) => {
+  if (!showResults) return {};
+  
+  const stats = getCurrentQuestionStats();
+  if (!stats) return {};
+  
+  // Get all cards with their percentages
+  const cardsWithPct = displayQuestion?.cards.map(card => ({
+    id: card.id,
+    pct: getCardPercentage(card.id)
+  })) || [];
+  
+  // Sort cards by percentage (high to low)
+  cardsWithPct.sort((a, b) => b.pct - a.pct);
+  
+  // Find the rank of this card
+  const rank = cardsWithPct.findIndex(c => c.id === cardId);
+  
+  // If we couldn't determine rank, use default
+  if (rank === -1) return {};
+  
+  // Calculate position (0 = most popular, 1 = second, etc.)
+  const position = rank / Math.max(1, cardsWithPct.length - 1);
+  
+  switch (playerSession.scoringMode) {
+    case 'trivia':
+      return { 
+        backgroundColor: correctIds.includes(cardId) 
+          ? 'rgba(0, 100, 0, 0.7)'  // Dark green for correct
+          : 'rgba(100, 0, 0, 0.7)'   // Dark red for incorrect
+      };
+      
+    case 'conformist': {
+      // Green to red gradient based on popularity rank
+      // 0 = most popular (green), 1 = least popular (red)
+      const hue = 120 * (1 - position);
+      return { backgroundColor: `hsla(${hue}, 70%, 30%, 0.8)` };
     }
-  };
+    
+    case 'contrarian': {
+      // Red to green gradient (opposite of conformist)
+      // 0 = most popular (red), 1 = least popular (green)
+      const hue = 120 * position;
+      return { backgroundColor: `hsla(${hue}, 70%, 30%, 0.8)` };
+    }
+    
+    default:
+      return {};
+  }
+};
+
 
   // Card select handler
   const handleCardSelect = (cardId: string) => {
-    if (showResults) return;
-    setSelectedCardId(cardId);
-    onSubmitAnswer(cardId, timeRemaining).then(res => {
-      // handle results display
-      setShowResults(true);
-      // reset for next question after delay
-      setTimeout(() => {
-        setShowResults(false);
-        setSelectedCardId(null);
-      }, 3500);
-    });
+    if (showResults || isSubmitting || !displayQuestion) return;
+    
+    if (displayQuestion.questionType === 'sequence') {
+      handleSequenceSelect(cardId);
+    } else {
+      setSelectedCardId(cardId);
+      handleSubmitAnswer(cardId, timeRemaining);
+    }
   };
 
   
@@ -412,205 +446,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           px-[clamp(.5rem,2vw,1rem)]
         "
       >
-        {displayQuestion?.questionType === 'sequence' ? (
-          // Sequence question UI
-          showResults ? (
-            // Results view for sequence questions
-            <div className="flex flex-col gap-4">
-              {/* Show correct sequence in trivia mode */}
-              {playerSession.scoringMode === 'trivia' && correctAnswer && (
-                <div className="bg-green-500/10 border border-green-400 rounded-lg p-3">
-                  <h3 className="text-green-300 text-center mb-2">Correct Sequence:</h3>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {(correctAnswer as string[]).map((cardId, index) => {
-                      const card = displayQuestion?.cards.find(c => c.id === cardId);
-                      return card ? (
-                        <div 
-                          key={cardId}
-                          className="flex items-center bg-green-600/30 border border-green-400 rounded-full px-3 py-1"
-                        >
-                          <span className="text-white mr-2 font-bold">{index + 1}.</span>
-                          <span className="text-white">{card.text}</span>
-                        </div>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              )}
-              
-              {/* User's sequence */}
-              <div className="bg-yellow-500/10 border border-yellow-400 rounded-lg p-3">
-                <h3 className="text-yellow-300 text-center mb-2">Your Sequence:</h3>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {Object.entries(sequenceOrder)
-                    .sort((a, b) => a[1] - b[1])
-                    .map(([cardId, order]) => {
-                      const card = displayQuestion?.cards.find(c => c.id === cardId);
-                      return card ? (
-                        <div 
-                          key={cardId}
-                          className="flex items-center bg-yellow-600/30 border border-yellow-400 rounded-full px-3 py-1"
-                        >
-                          <span className="text-white mr-2 font-bold">{order}.</span>
-                          <span className="text-white">{card.text}</span>
-                        </div>
-                      ) : null;
-                    })}
-                </div>
-              </div>
-            </div>
-          ) : (
-            // Playing view for sequence questions
-            <div className="flex flex-col gap-4">
-              {/* Selected sequence with order indicators */}
-              <div className="min-h-[60px] bg-white/10 border border-white/20 rounded-lg p-3">
-                <h3 className="text-blue-200 text-center mb-2">Your Sequence:</h3>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {Object.entries(sequenceOrder)
-                    .sort((a, b) => a[1] - b[1])
-                    .map(([cardId, order]) => {
-                      const card = displayQuestion?.cards.find(c => c.id === cardId);
-                      return card ? (
-                        <div 
-                          key={cardId}
-                          className="flex items-center bg-purple-600/50 border border-purple-400 rounded-full px-3 py-1"
-                        >
-                          <span className="text-white mr-2 font-bold">{order}.</span>
-                          <span className="text-white">{card.text}</span>
-                          <button 
-                            onClick={() => handleSequenceSelect(cardId)}
-                            className="ml-2 text-red-300 hover:text-red-100"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ) : null;
-                    })}
-                </div>
-              </div>
-
-              {/* Available cards with order indicators */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-[clamp(.25rem,1vw,.5rem)]">
-                {displayQuestion.cards.map(card => {
-                  const order = sequenceOrder[card.id];
-                  return (
-                    <button
-                      key={card.id}
-                      onClick={() => handleSequenceSelect(card.id)}
-                      disabled={showResults || isSubmitting}
-                      className={`
-                        relative flex items-center justify-center w-full
-                        min-h-[clamp(5rem,12vw,7rem)]
-                        p-[clamp(1rem,2.5vw,2.2rem)]
-                        rounded-xl border-2 overflow-hidden transition-all
-                        border-white/50 bg-white/10 hover:bg-white/20 active:scale-[0.98]
-                        disabled:opacity-50
-                        ${sequenceOrder[card.id] ? 'border-purple-400 bg-purple-500/20' : ''}
-                      `}
-                    >
-                      {order && (
-                        <div className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center bg-purple-500 rounded-full text-white font-bold">
-                          {order}
-                        </div>
-                      )}
-                      <span
-                        className="relative flex-1 font-semibold text-center
-                                  text-[clamp(1.25rem,3vw,1.75rem)] text-white"
-                      >
-                        {card.text}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              
-              {/* Submit button for sequence */}
-              {Object.keys(sequenceOrder).length > 0 && !showResults && (
-                <div className="mt-2 flex justify-center">
-                  <button
-                    onClick={submitSequence}
-                    disabled={isSubmitting}
-                    className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all disabled:opacity-50"
-                  >
-                    Submit Sequence
-                  </button>
-                </div>
-              )}
-            </div>
-          )
-        ) : (
-          // Multiple choice UI
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-[clamp(.25rem,1vw,.5rem)]">
-            {/* please fix this */}
-            {currentQuestion.cards.map((card) => {
-              const isSelected = selectedCardId === card.id;
-              const pct = showResults ? getCardPercentage(card.id) : 0;
-              //const isCorrect = showResults && correctIds.includes(card.id);
-              const isCorrect = showResults && getCardCorrect(card.id)
-
-              // Base classes + stateful overrides
-              const baseClasses = `
-                relative flex items-center justify-between w-full
-                min-h-[clamp(3rem,10vw,5rem)]
-                p-[clamp(.5rem,1.5vw,1rem)]
-                rounded-xl border-2 overflow-hidden transition-all
-              `;
-              let stateClasses = '';
-              if (!showResults) {
-                stateClasses = isSelected
-                  ? 'border-white bg-white/20 hover:bg-white/30'
-                  : 'border-white/50 bg-white/10 hover:bg-white/20';
-              } else {
-                if (isSelected) {
-                  stateClasses = 'border-yellow-400 bg-yellow-500/20 shadow-[0_0_15px_rgba(250,204,21,0.7)]';
-                } else if (playerSession.scoringMode === 'trivia') {
-                  stateClasses = isCorrect
-                    ? 'border-green-400 bg-green-500/20'
-                    : 'border-red-400 bg-red-500/20';
-                } else {
-                  // conformist/contrarian use getTintStyle for background
-                  stateClasses = 'border-transparent';
-                }
-              }
-
-              return (
-                <button
-                  key={card.id}
-                  onClick={() => handleCardSelect(card.id)}
-                  disabled={showResults || isSubmitting}
-                  className={`${baseClasses} ${stateClasses}`}
-                  style={getTintStyle(card.id)}
-                >
-                  {/* Fill bar in results */}
-                  {showResults && (
-                    <div
-                      className="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-purple-500/30 transition-all duration-500"
-                      style={{ width: `${pct}%` }}
-                    />
-                  )}
-
-                  {/* Card text */}
-                  <span className="relative flex-1 font-semibold text-left text-[clamp(1rem,2.5vw,1.25rem)] text-white">
-                    {card.text}
-                  </span>
-
-                  {/* Percentage + ticks */}
-                  {showResults && (
-                    <div className="relative flex items-center space-x-[clamp(.25rem,1vw,.5rem)]">
-                      <span className="font-bold text-[clamp(1rem,3vw,1.5rem)] text-white">
-                        {pct}%
-                      </span>
-                      {isSelected && <span className="text-[clamp(1.5rem,4vw,2rem)] text-blue-400">pp</span>}
-                      {!isSelected && isCorrect && (
-                        <span className="text-[clamp(1.5rem,4vw,2rem)] text-green-400">✓</span>
-                      )}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <AnswerCards
+          displayQuestion={displayQuestion!}
+          playerSession={playerSession}
+          selectedCardId={selectedCardId}
+          showResults={showResults}
+          isSubmitting={isSubmitting}
+          sequenceOrder={sequenceOrder}
+          handleSequenceSelect={handleSequenceSelect}
+          submitSequence={submitSequence}
+          handleCardSelect={handleCardSelect}
+          getCardPercentage={getCardPercentage}
+          getCardCorrect={getCardCorrect}
+          getTintStyle={getTintStyle}
+          correctAnswer={correctAnswer}
+        />
       </div>
 
       {/* Bottom Status */}

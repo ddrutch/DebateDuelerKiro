@@ -104,6 +104,9 @@ export type WebviewToBlockMessage =
   payload: {
     question: Question;
   }
+} | {
+  type : "GET_POST_DATA";
+  
 }
 
 export type BlocksToWebviewMessage = {
@@ -125,6 +128,16 @@ export type BlocksToWebviewMessage = {
       leaderboard: LeaderboardEntry[];
       playerRank: number | null;
       playerScore: number | null;
+    }
+  } | {
+    type : "GIVE_POST_DATA";
+    payload : {
+    postId: string;
+    deck : Deck;
+    playerSession: PlayerSession | null;
+    userId: string;
+    username: string;
+    playerRank: number | null;
   }
 };
 
