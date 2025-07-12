@@ -78,8 +78,18 @@ Devvit.addCustomPostType({
         // const = user?.modPermissions?.get(subredditName)?.length > 0 ?? false;
 
         const subredditName = await context.reddit.getCurrentSubredditName();
-        const isAdmin =
-          (user?.modPermissions?.get(subredditName)?.length ?? 0) > 0 ;
+        // const isAdmin =
+        //   (user?.modPermissions?.get(subredditName)?.length ?? 0) > 0 ;
+
+        
+        
+        let isAdmin = false;
+        const permissions = await user?.getModPermissionsForSubreddit(subredditName);
+        if (permissions && permissions.length > 0) {
+          isAdmin = true; // The user is a moderator
+        } else {
+          isAdmin = false; // The user is not a moderator
+        }
 
         
         const playerRank = await redisService.getPlayerRank(context.postId!, context.userId!);
