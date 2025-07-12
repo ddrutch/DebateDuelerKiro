@@ -12,9 +12,32 @@ import { HeroButton } from './components/HeroButton';
 // defineConfig({
 //   name: '[Bolt] Debate Dueler',
 //   entry: 'index.html',
-//   height: 'tall',
+//   height: 'tall',\
 //   menu: { enable: false },
 // });
+
+/**
+ * Randomly shuffles an array using the Fisher-Yates (Knuth) algorithm.
+ * @param array The array to shuffle.
+ * @returns The shuffled array.
+ */
+function shuffle(array: any[]) {
+  let currentIndex = array.length, randomIndex;
+
+  // While there remain elements to shuffle.
+  while (currentIndex !== 0) {
+
+    // Pick a remaining element.
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex], array[currentIndex]];
+  }
+
+  return array;
+}
 
 
 Devvit.addMenuItem({
@@ -48,6 +71,17 @@ Devvit.addCustomPostType({
         const deck = await redisService.getDeck(context.postId!) || defaultDeck;
         const playerSession = await redisService.getPlayerSession(context.postId!, context.userId!);
         const leaderboard = await redisService.getLeaderboard(context.postId!);
+
+        
+        const user = await context.reddit.getCurrentUser();
+        //const isAdmin = user?.isAdmin ?? false;
+        // const = user?.modPermissions?.get(subredditName)?.length > 0 ?? false;
+
+        const subredditName = await context.reddit.getCurrentSubredditName();
+        const isAdmin =
+          (user?.modPermissions?.get(subredditName)?.length ?? 0) > 0 ;
+
+        
         const playerRank = await redisService.getPlayerRank(context.postId!, context.userId!);
 
         if (deck == defaultDeck) {
@@ -56,6 +90,9 @@ Devvit.addCustomPostType({
 
         switch (data.type) {
           case 'INIT':   
+            // Shuffle the deck and then limit it to a maximum of 10 questions
+            deck.questions = shuffle(deck.questions).slice(0, 10);
+            
             postMessage({
               type: 'INIT_RESPONSE',
               payload: {
@@ -65,6 +102,7 @@ Devvit.addCustomPostType({
                 playerRank: playerRank,
                 userId : context.userId!,
                 username: await context.reddit.getCurrentUsername() || 'Anonymous',
+                isAdmin: isAdmin,
               },
             });
             break;
@@ -110,11 +148,53 @@ Devvit.addCustomPostType({
               await redisService.addQuestionToDeck(context.postId, question);
             }
           break;
+          case 'EDIT_QUESTION':
+            if (context.postId) {
+              await redisService.editQuestionInDeck(context.postId, data.payload.question);
+              // After editing, refresh the deck data in the webview
+              const updatedDeck = await redisService.getDeck(context.postId!) || defaultDeck;
+              postMessage({
+                type: 'GIVE_POST_DATA',
+                payload: {
+                  postId: context.postId!,
+                  deck: updatedDeck,
+                  playerSession: playerSession,
+                  playerRank: playerRank,
+                  userId: context.userId!,
+                  username: await context.reddit.getCurrentUsername() || 'Anonymous',
+                  isAdmin: isAdmin,
+                }
+              });
+            }
+            break;
+          case 'DELETE_QUESTION': // Handle delete question
+            if (context.postId) {
+              await redisService.deleteQuestionFromDeck(context.postId, data.payload.questionId);
+              // After deleting, refresh the deck data in the webview
+              const updatedDeck = await redisService.getDeck(context.postId!) || defaultDeck;
+              postMessage({
+                type: 'GIVE_POST_DATA',
+                payload: {
+                  postId: context.postId!,
+                  deck: updatedDeck,
+                  playerSession: playerSession,
+                  playerRank: playerRank,
+                  userId: context.userId!,
+                  username: await context.reddit.getCurrentUsername() || 'Anonymous',
+                  isAdmin: isAdmin,
+                }
+              });
+            }
+            break;
           case 'GET_POST_DATA':
             if (context.postId) {
               const gotDeck = await redisService.getDeck(context.postId!) || defaultDeck;
               const gotPlayerRank = await redisService.getPlayerRank(context.postId!, context.userId!);
               const gotPlayerSession = await redisService.getPlayerSession(context.postId!, context.userId!);
+              
+              // Shuffle the deck and then limit it to a maximum of 10 questions
+              gotDeck.questions = shuffle(gotDeck.questions).slice(0, 10);
+              
               postMessage({
                 type: 'GIVE_POST_DATA',
                 payload : {
@@ -124,6 +204,7 @@ Devvit.addCustomPostType({
                   playerRank: gotPlayerRank,
                   userId : context.userId!,
                   username: await context.reddit.getCurrentUsername() || 'Anonymous',
+                  isAdmin: isAdmin, // Pass isAdmin status
                 }
 
     
@@ -203,34 +284,5 @@ return (
 
   },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export default Devvit;

@@ -9,14 +9,16 @@ interface ResultsScreenProps {
   deck: Deck;
   playerSession: PlayerSession;
   onRestartGame: () => void;
+  onGoToAdminScreen: () => void; // New prop for admin screen navigation
+  isAdmin: boolean; // New prop to indicate admin status
 }
-
-
 
 export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   deck,
   playerSession,
   onRestartGame,
+  onGoToAdminScreen, // Destructure new prop
+  isAdmin, // Destructure new prop
   }) => {
     const [showQuestionAddedFeedback, setShowQuestionAddedFeedback] = useState(false);
     const [showCreateWizard, setShowCreateWizard] = useState(false);
@@ -55,6 +57,10 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
     questionType: 'multiple-choice' as 'multiple-choice' | 'sequence',
   });
   const [isCreatingPost, setIsCreatingPost] = useState(false);
+
+  // Determine if the current user is the creator of the deck
+  const isDeckCreator = playerSession.userId === deck.creatorID;
+  const canAccessAdmin = isAdmin || isDeckCreator; // User is admin if either isAdmin is true or they created the deck
 
   useEffect(() => {
     sendToDevvit({
@@ -125,40 +131,6 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
       //alert('Failed to add question. Please try again.');
     
   };
-
-  // const addQuestionToDeck = () => {
-  //   const filteredCards = currentDeckQuestion.cards.filter(card => card.trim());
-  //   if (!currentDeckQuestion.prompt.trim() || filteredCards.length < 2) {
-  //     //alert('Please provide a question and at least 2 answer options.');
-  //     return;
-  //   }
-
-  //   const newQuestion = {
-  //     prompt: currentDeckQuestion.prompt.trim(),
-  //     cards: filteredCards,
-  //     correctIndex: currentDeckQuestion.correctIndex,
-  //     questionType: currentDeckQuestion.questionType,
-  //   };
-
-  //   setNewDeck(prev => ({
-  //     ...prev,
-  //     questions: [...prev.questions, newQuestion],
-  //   }));
-  //   // Reset current question
-  //   setCurrentDeckQuestion({
-  //     prompt: '',
-  //     cards: ['', '', '', ''],
-  //     correctIndex: 0,
-  //     questionType: 'multiple-choice',
-  //   });
-  // };
-
-  // const removeQuestionFromDeck = (index: number) => {
-  //   setNewDeck(prev => ({
-  //     ...prev,
-  //     questions: prev.questions.filter((_, i) => i !== index),
-  //   }));
-  //};
 
   const handleCreateDeck = async (createdDeck: Deck) => {
     if (!createdDeck.title.trim() || !createdDeck.description.trim()) {
@@ -324,6 +296,17 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
           <span className="text-xl">🎨</span>
           <span className="text-xs mt-1">Create Deck</span>
         </button>
+
+        {/* Admin Button - Only visible if canAccessAdmin is true */}
+        {canAccessAdmin && (
+          <button
+            onClick={onGoToAdminScreen}
+            className="w-20 h-20 flex flex-col items-center justify-center bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold rounded-lg transition-all"
+          >
+            <span className="text-xl">⚙️</span>
+            <span className="text-xs mt-1">Admin</span>
+          </button>
+        )}
       </div>
 
 
@@ -419,6 +402,8 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
           onClose={() => setIsCreateDeckModalOpen(false)}
           onSubmit={handleCreateDeck}
           username={playerSession.username}
+          userID={playerSession.userId}
+          
         />
       )}
     </div>

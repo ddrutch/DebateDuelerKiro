@@ -13,6 +13,7 @@ export async function createNewPost(postData : Deck , context: Devvit.Context) {
         title: `${postData.title} by ${postData.createdBy}`,
         subredditName: subreddit.name,
         preview: <Preview />,
+        
         //runAs: 'USER',
     });
     const redisService = createRedisService(context);

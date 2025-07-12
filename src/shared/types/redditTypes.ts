@@ -35,6 +35,7 @@ export type Deck = {
   questionStats?: QuestionStats[]; // NEW: Stats for each question
   
   createdBy: string;
+  creatorID? : string;
   createdAt: number;
 };
 
@@ -59,8 +60,6 @@ export type PlayerSession = {
   finishedAt?: number;
 };
 
-
-
 export type LeaderboardEntry = {
   userId: string;
   username: string;
@@ -68,9 +67,6 @@ export type LeaderboardEntry = {
   scoringMode: ScoringMode;
   completedAt: number;
 };
-
-
-
 
 type Response<T> = { status: 'error'; message: string } | ({ status: 'success' } & T);
 
@@ -107,6 +103,16 @@ export type WebviewToBlockMessage =
 } | {
   type : "GET_POST_DATA";
   
+} | { // New message type for editing a question
+  type: "EDIT_QUESTION";
+  payload: {
+    question: Question;
+  };
+} | { // New message type for deleting a question
+  type: "DELETE_QUESTION";
+  payload: {
+    questionId: string;
+  };
 }
 
 export type BlocksToWebviewMessage = {
@@ -118,6 +124,7 @@ export type BlocksToWebviewMessage = {
     userId: string;
     username: string;
     playerRank: number | null;
+    isAdmin: boolean; // New property for admin status
   };
   } | {
     type : "CONFIRM_SAVE_PLAYER_DATA"
@@ -138,6 +145,7 @@ export type BlocksToWebviewMessage = {
     userId: string;
     username: string;
     playerRank: number | null;
+    isAdmin: boolean; // New property for admin status
   }
 };
 

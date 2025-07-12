@@ -2,17 +2,91 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { WelcomeScreen } from './WelcomeScreen';
 import { GameScreen } from './GameScreen';
 import { ResultsScreen } from './ResultsScreen';
+import { AdminScreen } from './adminScreen'; // Import the new AdminScreen
 import { useDevvitListener } from '../hooks/useDevvitListener';
 import { sendToDevvit } from '../utils';
+
+
 
 import { 
   ScoringMode, 
   Deck, 
   PlayerSession, 
-  PlayerAnswer 
+  PlayerAnswer,
+  Question,
+  QuestionStats
 } from '../../shared/types/redditTypes';
 
-type GamePhase = 'welcome' | 'playing' | 'results';
+const calculateLocalScore = (
+  answers: PlayerAnswer[],
+  question: Question,
+  questionStats: QuestionStats,
+  scoringMode: ScoringMode
+) => {
+  const answer = answers.find(a => a.questionId === question.id);
+  if (!answer) return 0;
+
+  // NEW: Consistent baseTimeBonus
+  const baseTimeBonus = Math.max(0, answer.timeRemaining);
+
+  if (question.questionType === 'sequence') {
+    const sequence = answer.answer as string[];
+
+    if (scoringMode === 'trivia') {
+      const correctSequence = question.cards
+        .filter(c => c.sequenceOrder !== undefined)
+        .sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0))
+        .map(c => c.id);
+
+      let correctPositions = 0;
+      sequence.forEach((cardId, index) => {
+        if (index < correctSequence.length && correctSequence[index] === cardId) {
+          correctPositions++;
+        }
+      });
+
+      const accuracy = correctPositions / correctSequence.length;
+      return Math.round(accuracy * 100) + baseTimeBonus;
+    } else {
+      // CORRECTED: Use positionStats for conformist/contrarian sequence scoring
+      if (!questionStats.positionStats) return 0;
+
+      let totalPct = 0;
+      sequence.forEach((cardId, index) => {
+        const positionCount = questionStats.positionStats?.[cardId]?.[index] || 0;
+        const positionTotal = questionStats.totalResponses;
+        const positionPct = positionTotal > 0 ? (positionCount / positionTotal) * 100 : 0;
+        totalPct += positionPct;
+      });
+
+      const averagePct = totalPct / sequence.length;
+
+      if (scoringMode === 'conformist') {
+        return Math.round(averagePct) + baseTimeBonus;
+      } else {
+        return Math.round(100 - averagePct) + baseTimeBonus;
+      }
+    }
+  } else {
+    // Existing logic for non-sequence questions remains the same
+    const cardId = answer.answer as string;
+    if (scoringMode === 'trivia') {
+      const card = question.cards.find(c => c.id === cardId);
+      return card?.isCorrect ? 100 + baseTimeBonus : 0;
+    }
+    
+    const count = questionStats.cardStats[cardId] || 0;
+    const popularity = questionStats.totalResponses > 0 ? (count / questionStats.totalResponses) : 0;
+
+    if (scoringMode === 'contrarian') {
+      return Math.round((1 - popularity) * 100) + baseTimeBonus;
+    } else {
+      return Math.round(popularity * 100) + baseTimeBonus;
+    }
+  }
+};
+
+type GamePhase = 'welcome' | 'playing' | 'results' | 'admin'; // Add 'admin' phase
 
 export const DebateDueler: React.FC = () => {
   const LOCAL_STORAGE_KEY = 'debateDuelerState';
@@ -21,6 +95,7 @@ export const DebateDueler: React.FC = () => {
   const [playerSession, setPlayerSession] = useState<PlayerSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false); // New state for admin status
 
   // Local storage for answers during gameplay
   const [localAnswers, setLocalAnswers] = useState<PlayerAnswer[]>([]);
@@ -76,6 +151,7 @@ export const DebateDueler: React.FC = () => {
       // Only update deck and player session
       setDeck(payload.deck);
       setPlayerSession(payload.playerSession);
+      setIsAdmin(payload.isAdmin || false); // Update isAdmin status
     } catch (err) {
       console.error('Failed to process refresh data:', err);
     }
@@ -110,6 +186,7 @@ export const DebateDueler: React.FC = () => {
         }
       }
       setDeck(payload.deck);
+      setIsAdmin(payload.isAdmin || false); // Set isAdmin status from init response
       
       if (!useSavedState) {
         // Use session from payload if available
@@ -211,72 +288,17 @@ export const DebateDueler: React.FC = () => {
         timeRemaining,
         timestamp: Date.now(),
       };
-
-      // Calculate score locally
-      const baseTimeBonus = Math.max(0, timeRemaining);
-      let questionScore = 0;
       
-      // For trivia mode, we can calculate exact score locally
-      if (playerSession.scoringMode === 'trivia') {
-        if (currentQuestion.questionType === 'sequence') {
-          const sequence = answer as string[];
-          const correctSequence = currentQuestion.cards
-            .filter(c => c.sequenceOrder !== undefined)
-            .sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0))
-            .map(c => c.id);
-          
-          let correctPositions = 0;
-          sequence.forEach((cardId, index) => {
-            if (index < correctSequence.length && correctSequence[index] === cardId) {
-              correctPositions++;
-            }
-          });
-          
-          const accuracy = correctPositions / correctSequence.length;
-          questionScore = Math.round(accuracy * 100) + baseTimeBonus;
-        } else {
-          const cardId = answer as string;
-          const card = currentQuestion.cards.find(c => c.id === cardId);
-          questionScore = card?.isCorrect ? 100 + baseTimeBonus : 0;
-        }
-
-      } else if (playerSession.scoringMode === 'conformist' || playerSession.scoringMode === 'contrarian') {
-      // For conformist/contrarian, we need to use stats if available
       const questionStats = deck.questionStats?.find(s => s.questionId === currentQuestion.id);
+
+      // NEW: Calculate score using the unified function
+      const questionScore = calculateLocalScore(
+        [...localAnswers, answerRecord],
+        currentQuestion,
+        questionStats || { questionId: currentQuestion.id, cardStats: {}, totalResponses: 0 },
+        playerSession.scoringMode
+      );
       
-      if (questionStats && questionStats.totalResponses > 0) {
-        if (currentQuestion.questionType === 'sequence') {
-          const sequence = answer as string[];
-          let totalPct = 0;
-          
-          sequence.forEach(cardId => {
-            const count = questionStats.cardStats[cardId] || 0;
-            totalPct += (count / questionStats.totalResponses) * 100;
-          });
-          
-          const averagePct = totalPct / sequence.length;
-          questionScore = playerSession.scoringMode === 'conformist' 
-            ? Math.round(averagePct) + baseTimeBonus 
-            : Math.round(100 - averagePct) + baseTimeBonus;
-        } else {
-          const cardId = answer as string;
-          const count = questionStats.cardStats[cardId] || 0;
-          const pct = (count / questionStats.totalResponses) * 100;
-          
-          questionScore = playerSession.scoringMode === 'conformist' 
-            ? Math.round(pct) + baseTimeBonus 
-            : Math.round(100 - pct) + baseTimeBonus;
-        }
-      } else {
-        // No stats available, use base score
-        questionScore = 50 + baseTimeBonus;
-      }
-    } else {
-      // Fallback scoring
-      questionScore = 50 + baseTimeBonus;
-    }
-
-
       // Update local state
       const newLocalAnswers = [...localAnswers, answerRecord];
       const newLocalScore = localScore + questionScore;
@@ -349,7 +371,7 @@ export const DebateDueler: React.FC = () => {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       clearTimerStorage();
     }
-  }, [playerSession, postMessage]);
+  }, [playerSession, sendToDevvit]);
 
   const restartGame = useCallback(() => {
     sendToDevvit( {type: 'GET_POST_DATA'})
@@ -361,7 +383,18 @@ export const DebateDueler: React.FC = () => {
     setLocalScore(0);
     setGamePhase('welcome');
     setError(null);
+  }, [sendToDevvit]);
+
+  // Function to navigate to admin screen
+  const goToAdminScreen = useCallback(() => {
+    setGamePhase('admin');
   }, []);
+
+  // Function to go back to results from admin screen
+  const backToResults = useCallback(() => {
+    sendToDevvit({ type: 'GET_POST_DATA' }); // Refresh data after admin changes
+    setGamePhase('results');
+  }, [sendToDevvit]);
 
   if (loading) {
     return (
@@ -431,6 +464,17 @@ export const DebateDueler: React.FC = () => {
           deck={deck}
           playerSession={displaySession!}
           onRestartGame={restartGame}
+          onGoToAdminScreen={goToAdminScreen} // Pass the new prop
+          isAdmin={isAdmin} // Pass isAdmin status
+        />
+      );
+    case 'admin': // New case for admin screen
+      return (
+        <AdminScreen
+          deck={deck}
+          playerSession={displaySession!}
+          onBackToResults={backToResults}
+          isAdmin = {isAdmin}
         />
       );
     

@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Question,
-  QuestionStats,
   PlayerSession,
 } from '../../shared/types/redditTypes';
 

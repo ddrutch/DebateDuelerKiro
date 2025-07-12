@@ -1,3 +1,5 @@
+// redisService.ts
+
 import { Devvit, TriggerContext } from "@devvit/public-api";
 import { LeaderboardEntry } from "../shared/types/redditTypes.js";
 import { PlayerSession } from "../shared/types/redditTypes.js";
@@ -36,6 +38,8 @@ export type RedisService = {
 
     //utils
     addQuestionToDeck: (postId: string, question: Question) => Promise<void>;
+    editQuestionInDeck: (postId: string, updatedQuestion: Question) => Promise<void>; // New function
+    deleteQuestionFromDeck: (postId: string, questionId: string) => Promise<void>; // New function
 
 
 }
@@ -57,7 +61,8 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
         questionStats: QuestionStats;
         timeRemaining: number;
     }): number {
-        const baseTimeBonus = Math.max(0, timeRemaining * 5);
+        // Updated to match the DebateDueler.tsx time bonus
+        const baseTimeBonus = Math.max(0, timeRemaining);
         
         const getCardPercentage = (cardId: string): number => {
             if (!questionStats || questionStats.totalResponses === 0) return 0;
@@ -84,9 +89,15 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
                 const accuracy = correctPositions / correctSequence.length;
                 return Math.round(accuracy * 100) + baseTimeBonus;
             } else {
+                // NEW: Use positionStats for conformist/contrarian sequence scoring
+                if (!questionStats.positionStats) return 0;
+                
                 let totalPct = 0;
-                sequence.forEach(cardId => {
-                    totalPct += getCardPercentage(cardId);
+                sequence.forEach((cardId, index) => {
+                    const positionCount = questionStats.positionStats?.[cardId]?.[index] || 0;
+                    const positionTotal = questionStats.totalResponses;
+                    const positionPct = positionTotal > 0 ? (positionCount / positionTotal) * 100 : 0;
+                    totalPct += positionPct;
                 });
                 
                 const averagePct = totalPct / sequence.length;
@@ -124,7 +135,7 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
         },
 
         getLeaderboard: async (postId) => {
-            const leaderboardKey = `leaderboard:${postId}`;
+            const leaderboardKey = getLeaderboardKey(postId);
             // Get all entries with scores
             const allEntries = await redis.zRange(leaderboardKey, 0, -1);
             
@@ -179,6 +190,7 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
                         questionStats = {
                         questionId: question.id,
                         cardStats: {},
+                        positionStats: {},
                         totalResponses: 0
                         };
                         deck.questionStats.push(questionStats);
@@ -191,9 +203,21 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
                         questionStats.cardStats[answer.answer] = 
                         (questionStats.cardStats[answer.answer] || 0) + 1;
                     } else {
-                        for (const cardId of answer.answer) {
-                        questionStats.cardStats[cardId] = 
-                            (questionStats.cardStats[cardId] || 0) + 1;
+                        // NEW: Update both cardStats and positionStats for sequence questions
+                        if (!questionStats.positionStats) questionStats.positionStats = {};
+                        for (let i = 0; i < answer.answer.length; i++) {
+                            // CORRECTED: Added null/undefined check
+                            const cardId = answer.answer[i];
+                            if (cardId) {
+                                // Update general card stats
+                                questionStats.cardStats[cardId] = (questionStats.cardStats[cardId] || 0) + 1;
+                                
+                                // Update position-specific stats
+                                if (!questionStats.positionStats[cardId]) {
+                                    questionStats.positionStats[cardId] = {};
+                                }
+                                questionStats.positionStats[cardId][i] = (questionStats.positionStats[cardId][i] || 0) + 1;
+                            }
                         }
                     }
 
@@ -330,6 +354,7 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
                 const newStats: QuestionStats = {
                     questionId: newQuestion.id,
                     cardStats: {},
+                    positionStats: {},
                     totalResponses: 0
                 };
                 
@@ -346,6 +371,57 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
                 console.log(`Added question ${newQuestion.id} to deck for post ${postId}`);
             } catch (error) {
                 console.error(`Error adding question to deck: ${error}`);
+            }
+        },
+
+        editQuestionInDeck: async (postId: string, updatedQuestion: Question) => {
+            try {
+                const deckKey = getDeckKey(postId);
+                const deckData = await redis.get(deckKey);
+                if (!deckData) {
+                    console.error(`No deck found for post ${postId} to edit question.`);
+                    return;
+                }
+                let deck: Deck = JSON.parse(deckData);
+
+                const questionIndex = deck.questions.findIndex(q => q.id === updatedQuestion.id);
+                if (questionIndex !== -1) {
+                    deck.questions[questionIndex] = updatedQuestion;
+                    await redis.set(deckKey, JSON.stringify(deck));
+                    console.log(`Edited question ${updatedQuestion.id} in deck for post ${postId}`);
+                } else {
+                    console.warn(`Question with ID ${updatedQuestion.id} not found in deck for post ${postId}.`);
+                }
+            } catch (error) {
+                console.error(`Error editing question in deck: ${error}`);
+            }
+        },
+
+        deleteQuestionFromDeck: async (postId: string, questionId: string) => {
+            try {
+                const deckKey = getDeckKey(postId);
+                const deckData = await redis.get(deckKey);
+                if (!deckData) {
+                    console.error(`No deck found for post ${postId} to delete question.`);
+                    return;
+                }
+                let deck: Deck = JSON.parse(deckData);
+
+                const initialLength = deck.questions.length;
+                deck.questions = deck.questions.filter(q => q.id !== questionId);
+                
+                if (deck.questions.length < initialLength) {
+                    // Also remove associated stats if they exist
+                    if (deck.questionStats) {
+                        deck.questionStats = deck.questionStats.filter(s => s.questionId !== questionId);
+                    }
+                    await redis.set(deckKey, JSON.stringify(deck));
+                    console.log(`Deleted question ${questionId} from deck for post ${postId}`);
+                } else {
+                    console.warn(`Question with ID ${questionId} not found in deck for post ${postId}.`);
+                }
+            } catch (error) {
+                console.error(`Error deleting question from deck: ${error}`);
             }
         },
 

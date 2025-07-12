@@ -38,12 +38,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const total = deck.questions.length;
   const [progressOnResult, setProgressOnResult] = useState(0);
   const TIMER_STORAGE_KEY = `debateTimer_${deck.id}_${playerSession.currentQuestionIndex}`;
-  // const displayQuestion = showResults ? answeredQuestion : currentQuestion;
-  // const displayQuestionIndex = showResults ? answeredQuestionIndex : playerSession.currentQuestionIndex;
-
+ 
   const displayQuestion = showResults ? answeredQuestion : deck.questions[playerSession.currentQuestionIndex];
   const displayQuestionIndex = showResults ? answeredQuestionIndex : playerSession.currentQuestionIndex;
   const [correctAnswer, setCorrectAnswer] = useState<string | string[] | null>(null);
+  const [isQuestionExpanded, setIsQuestionExpanded] = useState(false);
 
   const getCurrentQuestionStats = (): QuestionStats | null => {
     if (!deck.questionStats || !displayQuestion) return null;
@@ -125,18 +124,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     }
   }, [onSubmitAnswer, isSubmitting, currentQuestion, playerSession]);
 
-  // Handle card select based on question type
-  // const handleCardSelect = (cardId: string) => {
-  //   if (showResults || isSubmitting || !currentQuestion) return;
-    
-  //   if (currentQuestion.questionType === 'sequence') {
-  //     handleSequenceSelect(cardId);
-  //   } else {
-  //     setSelectedCardId(cardId);
-  //     handleSubmitAnswer(cardId, timeRemaining);
-  //   }
-  // };
-
   const getCardPercentage = (cardId: string): number => {
       const stats = getCurrentQuestionStats();
       if (!stats || stats.totalResponses === 0) return 0;
@@ -168,27 +155,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const progressPercentage = getProgressPercentage();
 
-
-
-  // Helper: find stats for the display question
-  // const getCurrentQuestionStats = (): QuestionStats | null => {
-  //   if (!deck.questionStats || !currentQuestion) return null;
-  //   return deck.questionStats.find(s => s.questionId === currentQuestion.id) || null;
-  // };
-
   // Compute correct IDs
   const correctIds = useMemo(() => {
     if (!displayQuestion) return [];
     return displayQuestion.cards.filter(c => c.isCorrect).map(c => c.id);
   }, [displayQuestion]);
 
-  // Compute percentage for a card based on stats
-  // const getCardPercentage = (cardId: string): number => {
-  //   const stats = getCurrentQuestionStats();
-  //   if (!stats || stats.totalResponses === 0) return 0;
-  //   const count = stats.cardStats[cardId] || 0;
-  //   return Math.round((count / stats.totalResponses) * 100);
-  // };
 
   // Determine tint style
 const getTintStyle = (cardId: string) => {
@@ -404,16 +376,65 @@ const getTintStyle = (cardId: string) => {
       )}
 
       {/* Question Area */}
-      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-[clamp(.5rem,2vw,1rem)] mx-[clamp(.5rem,2vw,1rem)] mb-[clamp(.5rem,1vw,1rem)]">
-        <h2 className="text-white font-bold text-center text-[clamp(1rem,4vw,2rem)] leading-tight">
-          {displayQuestion?.prompt}
-        </h2>
-        {displayQuestion?.authorUsername && (
-          <p className="text-blue-200 text-[clamp(.5rem,1.5vw,.75rem)] text-center mt-[clamp(.25rem,1vw,.5rem)]">
-            by u/{displayQuestion?.authorUsername}
-          </p>
-        )}
-      </div>
+      <div className="relative">
+        <div 
+          onClick={() => setIsQuestionExpanded(true)}
+          className="relative cursor-pointer bg-white/10 backdrop-blur-sm rounded-xl p-[clamp(.5rem,2vw,1rem)] mx-[clamp(.5rem,2vw,1rem)] mb-[clamp(.5rem,1vw,1rem)] transition-all hover:bg-white/20"
+        >
+          <h2 className="text-white font-bold text-center text-[clamp(1rem,4vw,2rem)] leading-tight">
+            {displayQuestion?.prompt}
+          </h2>
+          {displayQuestion?.authorUsername && (
+            <p className="text-blue-200 text-[clamp(.5rem,1.5vw,.75rem)] text-center mt-[clamp(.25rem,1vw,.5rem)]">
+              by u/{displayQuestion?.authorUsername}
+            </p>
+          )}
+          {/* The new animated cue */}
+          <div
+            //className="absolute bottom-0 right-0 w-4 h-4 bg-white/40 rounded-br-xl animate-pulse"
+            //className="absolute bottom-0 right-0 w-12 h-1 bg-white/40 rounded-full animate-pulse"
+            //className="absolute bottom-0 right-0 w-4 h-4 bg-white/40 rounded-br-xl animate-pulse"
+            className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-white/40 rounded-br-xl animate-pulse"
+
+
+          />
+        </div>
+       </div>
+
+      {/* Pop-up Overlay */}
+      {isQuestionExpanded && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md transition-opacity duration-300"
+          onClick={() => setIsQuestionExpanded(false)}
+        >
+          {/* The text label */}
+          <div className="absolute bottom-6 text-white/70 text-sm animate-pulse">
+            Press anywhere to close
+           </div>          
+          <div 
+            className="bg-white/10 rounded-xl pt-8 px-8 pb-4 max-w-2xl mx-auto shadow-lg border border-white/20 flex flex-col justify-between items-center h-full w-full max-h-[80vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Main Question Text */}
+            <div className="flex-grow overflow-y-auto w-full p-4">
+              <h2 className="text-white font-bold text-center text-[clamp(1.5rem,6vw,3rem)] leading-tight mb-4">
+                {displayQuestion?.prompt}
+              </h2>
+              {displayQuestion?.authorUsername && (
+                <p className="text-blue-200 text-[clamp(.75rem,2vw,1.25rem)] text-center">by u/{displayQuestion?.authorUsername}</p>
+              )}
+            </div>
+            {/* New Close Button with larger clickable area */}
+            <div
+              onClick={() => setIsQuestionExpanded(false)}
+              className="w-24 h-8 flex items-center justify-center cursor-pointer mt-auto"
+            >
+              <div className="w-12 h-1 bg-white/50 rounded-full transition-all hover:bg-white" />
+            </div>
+          </div>
+        </div>
+      )}
+  
 
       {/* Results Display */}
       {showResults && (
