@@ -8,6 +8,10 @@ import { Preview } from './Preview';
 import { Question } from '../shared/types/redditTypes';
 import { HeroButton } from './components/HeroButton';
 
+import { MainScreen } from './components/GameInterface'; // Imp
+// ort your new component
+
+
 
 // defineConfig({
 //   name: '[Bolt] Debate Dueler',
@@ -228,70 +232,13 @@ Devvit.addCustomPostType({
         }
       },
     });
-
-return (
-  <zstack width="100%" height="100%" alignment="center middle">
-    {/* Background */}
-    <image
-      imageHeight={1024}
-      imageWidth={1500}
-      height="100%"
-      width="100%"
-      url="background2.png"
-      description="Striped blue background"
-      resizeMode="cover"
-    />
-
-    {/* Bolt badge in top‑right, smaller */}
-    <zstack
-      width="100%"
-      height="100%"
-      alignment="top center"
-      padding="small"
-    >
-      <image
-        url="bolt.png"
-        description="Bolt badge"
-        width="50px"
-        height="50px"
-        imageWidth="150px"
-        imageHeight="150px"
-        onPress={() => context.ui.navigateTo("https://bolt.new/")}
+    
+    return (
+      <MainScreen
+            onPlayPress={mount}
+            onBoltPress={() => context.ui.navigateTo("https://bolt.new/")}
       />
-    </zstack>
-
-    <vstack alignment="center" gap="none" padding="large" grow>
-      {/* Logo */}
-      <vstack width="100%" height="30%" alignment="top center">
-        <image
-          url="logo.png"
-          description="Logo"
-          height="140px"
-          width="140px"
-          imageHeight="240px"
-          imageWidth="240px"
-        />
-      </vstack>
-
-      {/* Title / subtitle */}
-      <vstack height="30%" alignment="middle center" gap="medium">
-        <text size="xxlarge" weight="bold" outline="thick">
-          {/* your title here */}
-        </text>
-      </vstack>
-
-      {/* Old bolt slot, now HeroButton doubled in size */}
-      <vstack height="40%" alignment="bottom center" gap="medium">
-        <HeroButton
-          label="Play the game!!"
-          onPress={mount}
-          animated
-        />
-      </vstack>
-    </vstack>
-  </zstack>
-);
-
+    );
   },
 });
 
