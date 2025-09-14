@@ -236,7 +236,7 @@ Devvit.addCustomPostType({
     return (
       <MainScreen
             onPlayPress={mount}
-            onBoltPress={() => context.ui.navigateTo("https://bolt.new/")}
+            
       />
     );
   },

@@ -102,7 +102,6 @@ export type WebviewToBlockMessage =
   }
 } | {
   type : "GET_POST_DATA";
-  
 } | { // New message type for editing a question
   type: "EDIT_QUESTION";
   payload: {

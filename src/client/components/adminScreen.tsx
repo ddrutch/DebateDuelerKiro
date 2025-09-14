@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Deck, Question, PlayerSession, GameCard } from '../../shared/types/redditTypes'; // Import GameCard
 import { sendToDevvit } from '../utils.js'; // Added .js extension
 

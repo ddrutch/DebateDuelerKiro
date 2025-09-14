@@ -212,11 +212,12 @@ export function createRedisService(context: Devvit.Context|TriggerContext): Redi
                                 // Update general card stats
                                 questionStats.cardStats[cardId] = (questionStats.cardStats[cardId] || 0) + 1;
                                 
-                                // Update position-specific stats
+                                // Update position-specific stats (1-based positions)
+                                const position = i + 1;
                                 if (!questionStats.positionStats[cardId]) {
                                     questionStats.positionStats[cardId] = {};
                                 }
-                                questionStats.positionStats[cardId][i] = (questionStats.positionStats[cardId][i] || 0) + 1;
+                                questionStats.positionStats[cardId][position] = (questionStats.positionStats[cardId][position] || 0) + 1;
                             }
                         }
                     }

@@ -30,6 +30,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const isLastQuestion = playerSession.currentQuestionIndex >= deck.questions.length - 1;
   const ANSWER_DISPLAY_MS = 3500;
   const [sequenceOrder, setSequenceOrder] = useState<Record<string, number>>({});
+  const [answeredSequenceOrder, setAnsweredSequenceOrder] = useState<Record<string, number>>({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [answeredQuestion, setAnsweredQuestion] = useState<Question | null>(null);
   const [answeredQuestionIndex, setAnsweredQuestionIndex] = useState(-1);
@@ -41,7 +42,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
  
   const displayQuestion = showResults ? answeredQuestion : deck.questions[playerSession.currentQuestionIndex];
   const displayQuestionIndex = showResults ? answeredQuestionIndex : playerSession.currentQuestionIndex;
-  const [correctAnswer, setCorrectAnswer] = useState<string | string[] | null>(null);
   const [isQuestionExpanded, setIsQuestionExpanded] = useState(false);
 
   const getCurrentQuestionStats = (): QuestionStats | null => {
@@ -107,8 +107,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       setLastScore(result.score);
       setShowResults(true);
 
-      // Reset sequence for next question
-      if (currentQuestion?.questionType === 'sequence') {
+      // Store sequence order for results display, then reset for next question
+      if (Array.isArray(answer)) {
+        // Reconstruct sequence order from the answer array
+        const reconstructedOrder: Record<string, number> = {};
+        answer.forEach((cardId, index) => {
+          reconstructedOrder[cardId] = index + 1;
+        });
+        setAnsweredSequenceOrder(reconstructedOrder);
         setSequenceOrder({});
       }
       
@@ -135,6 +141,73 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     if (!displayQuestion) return false;
     return !!displayQuestion.cards.find(c => c.id === cardId && c.isCorrect);
   }
+
+  // Position-based helper functions for sequence questions
+  const getPositionPercentage = (cardId: string, position: number): number => {
+    const stats = getCurrentQuestionStats();
+    if (!stats?.positionStats || stats.totalResponses === 0) return 0;
+    
+    const count = stats.positionStats[cardId]?.[position] || 0;
+    return Math.round((count / stats.totalResponses) * 100);
+  };
+
+  const getPositionTintStyle = (cardId: string, position: number) => {
+    if (!showResults) return {};
+    
+    const stats = getCurrentQuestionStats();
+    if (!stats?.positionStats) return {};
+    
+    // Get all cards with their percentages for this position
+    const cardsWithPct = displayQuestion?.cards.map(card => ({
+      id: card.id,
+      pct: getPositionPercentage(card.id, position)
+    })) || [];
+    
+    // Sort cards by percentage (high to low)
+    cardsWithPct.sort((a, b) => b.pct - a.pct);
+    
+    // Find the rank of this card
+    const rank = cardsWithPct.findIndex(c => c.id === cardId);
+    
+    // If we couldn't determine rank, use default
+    if (rank === -1) return {};
+    
+    // Calculate position (0 = most popular, 1 = second, etc.)
+    const positionRatio = rank / Math.max(1, cardsWithPct.length - 1);
+    
+    switch (playerSession.scoringMode) {
+      case 'trivia':
+        // For trivia, show green if this is the correct position, red if not
+        const correctSequence = displayQuestion?.cards
+          .filter(c => c.sequenceOrder !== undefined)
+          .sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0))
+          .map(c => c.id) || [];
+        
+        const isCorrectPosition = correctSequence[position - 1] === cardId;
+        return { 
+          backgroundColor: isCorrectPosition 
+            ? 'rgba(0, 100, 0, 0.7)'  // Dark green for correct
+            : 'rgba(100, 0, 0, 0.7)'   // Dark red for incorrect
+        };
+        
+      case 'conformist': {
+        // Green to red gradient based on popularity rank
+        // 0 = most popular (green), 1 = least popular (red)
+        const hue = 120 * (1 - positionRatio);
+        return { backgroundColor: `hsla(${hue}, 70%, 30%, 0.8)` };
+      }
+      
+      case 'contrarian': {
+        // Red to green gradient (opposite of conformist)
+        // 0 = most popular (red), 1 = least popular (green)
+        const hue = 120 * positionRatio;
+        return { backgroundColor: `hsla(${hue}, 70%, 30%, 0.8)` };
+      }
+      
+      default:
+        return {};
+    }
+  };
 
   const getScoringModeIcon = () => {
     switch (playerSession.scoringMode) {
@@ -307,24 +380,6 @@ const getTintStyle = (cardId: string) => {
   }, [showResults, isLastQuestion]);
 
 
-  useEffect(() => {
-    if (showResults && currentQuestion && playerSession.scoringMode === 'trivia') {
-      if (currentQuestion.questionType === 'sequence') {
-        // Get correct sequence order
-        const correctSequence = currentQuestion.cards
-          .filter(c => c.sequenceOrder !== undefined)
-          .sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0))
-          .map(c => c.id);
-        setCorrectAnswer(correctSequence);
-      } else {
-        // Find correct card for multiple-choice
-        const correctCard = currentQuestion.cards.find(c => c.isCorrect);
-        setCorrectAnswer(correctCard?.id || null);
-      }
-    } else {
-      setCorrectAnswer(null);
-    }
-  }, [showResults, currentQuestion, playerSession.scoringMode]);
 
   return (
     <div className="h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex flex-col overflow-hidden">
@@ -474,13 +529,15 @@ const getTintStyle = (cardId: string) => {
           showResults={showResults}
           isSubmitting={isSubmitting}
           sequenceOrder={sequenceOrder}
+          answeredSequenceOrder={answeredSequenceOrder}
           handleSequenceSelect={handleSequenceSelect}
           submitSequence={submitSequence}
           handleCardSelect={handleCardSelect}
           getCardPercentage={getCardPercentage}
           getCardCorrect={getCardCorrect}
           getTintStyle={getTintStyle}
-          correctAnswer={correctAnswer}
+          getPositionPercentage={getPositionPercentage}
+          getPositionTintStyle={getPositionTintStyle}
         />
       </div>
 

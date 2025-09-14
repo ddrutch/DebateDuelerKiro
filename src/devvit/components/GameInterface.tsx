@@ -4,10 +4,9 @@ import { HeroButton } from './HeroButton'; // Assuming HeroButton is in the same
 
 interface MainScreenProps {
   onPlayPress: () => void;
-  onBoltPress: () => void;
 }
 
-export const MainScreen: Devvit.BlockComponent<MainScreenProps> = ({ onPlayPress, onBoltPress }) => {
+export const MainScreen: Devvit.BlockComponent<MainScreenProps> = ({ onPlayPress }) => {
   return (
     <zstack width="100%" height="100%" alignment="center middle">
       {/* Background */}
@@ -28,7 +27,7 @@ export const MainScreen: Devvit.BlockComponent<MainScreenProps> = ({ onPlayPress
         alignment="top center"
         padding="small"
       >
-        <image
+        {/* <image
           url="bolt.png"
           description="Bolt badge"
           width="50px"
@@ -36,7 +35,7 @@ export const MainScreen: Devvit.BlockComponent<MainScreenProps> = ({ onPlayPress
           imageWidth="150px"
           imageHeight="150px"
           onPress={onBoltPress} // Use prop for onPress
-        />
+        /> */}
       </zstack>
 
       <vstack alignment="center" gap="none" padding="large" grow>

@@ -21,7 +21,7 @@ interface CreateDeckWizardProps {
 
 export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onSubmit, username, userID }) => {
   const [step, setStep] = useState(1);
-  const [questionCount, setQuestionCount] = useState(5);
+  const [questionCount] = useState(5);
   const [errors, setErrors] = useState({
     title: '',
     description: '',
@@ -38,8 +38,6 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
     questionStats: [], // Added
   });
 
-  // Helper function to generate unique card IDs
-  const generateCardId = () => `card_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 
   const createGameCard = (text: string, isCorrect: boolean, sequenceOrder: number): GameCard => ({
     id: `card_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
@@ -65,6 +63,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
 
 
   const [currentQuestion, setCurrentQuestion] = useState<Question>(initializeQuestion());
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const isLastStep = () => step === 1 + questionCount + 1;
 
@@ -141,7 +140,8 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
         theme: deck.theme,
         flairCSS: safeFlair.cssClass,
         questions: deck.questions,
-        flairText: deck.title.trim(),
+        //flairText: deck.title.trim(),
+        flairText: safeFlair.label,
         creatorID : userID,
         createdBy: username ,
         createdAt: Date.now(),
@@ -218,9 +218,58 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
     }
   };
 
+  // Drag and drop functions for sequence questions
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (currentQuestion.questionType === 'sequence') {
+      setDraggedIndex(index);
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex || currentQuestion.questionType !== 'sequence') {
+      return;
+    }
+
+    const newCards = [...currentQuestion.cards];
+    const draggedCard = newCards[draggedIndex];
+    
+    if (!draggedCard) return;
+    
+    // Remove dragged card
+    newCards.splice(draggedIndex, 1);
+    
+    // Insert at new position
+    newCards.splice(dropIndex, 0, draggedCard);
+    
+    // Update sequenceOrder for all cards
+    const updatedCards = newCards.map((card, index) => ({
+      ...card,
+      sequenceOrder: index + 1
+    }));
+    
+    setCurrentQuestion({
+      ...currentQuestion,
+      cards: updatedCards,
+    });
+    
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/80">
-      <div className="bg-gradient-to-br from-purple-800 to-blue-900 rounded-xl p-6 w-full max-w-2xl md:max-w-3xl lg:max-w-4xl h-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-40 flex items-center justify-center p-2 sm:p-4 bg-black/80">
+      <div className="bg-gradient-to-br from-purple-800 to-blue-900 rounded-xl p-3 sm:p-6 w-full max-w-2xl md:max-w-3xl lg:max-w-4xl h-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex-1 overflow-auto">
           {step === 1 && (
             <div className="space-y-4">
@@ -250,17 +299,17 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
               </div>
               
               <div>
-                <label className="block text-blue-200">Theme</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="block text-blue-200 mb-2">Theme</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                   {THEME_FLAIRS.map(f => (
                     <button
                       key={f.id}
                       onClick={() => setDeck(d => ({ ...d, theme: f.id, flairCSS: f.cssClass }))}
-                      className={`p-2 rounded ${deck.theme === f.id ? 'bg-white/30' : 'bg-white/10'}`}
+                      className={`p-2 sm:p-3 rounded-lg transition-all ${deck.theme === f.id ? 'bg-white/30 ring-2 ring-blue-400' : 'bg-white/10 hover:bg-white/20'}`}
                     >
                       <div className="text-center">
-                        <div className="text-lg">{f.icon}</div>
-                        <div className="text-xs text-white">{f.label}</div>
+                        <div className="text-lg sm:text-xl">{f.icon}</div>
+                        <div className="text-xs sm:text-sm text-white mt-1">{f.label}</div>
                       </div>
                     </button>
                   ))}
@@ -271,26 +320,40 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
 
           {step > 1 && !isLastStep() && (
             <div className="space-y-4">
-              <h4 className="text-white text-xl font-bold">Question {step - 1}</h4>
+              <h4 className="text-white text-lg sm:text-xl font-bold">Question {step - 1}</h4>
               
-              <div className="flex space-x-2 mb-4">
+              <div className="flex flex-col sm:flex-row gap-2 mb-4">
                 <button
-                  className={`px-3 py-1 rounded ${currentQuestion.questionType === 'multiple-choice' ? 'bg-blue-500' : 'bg-gray-700'}`}
+                  className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
+                    currentQuestion.questionType === 'multiple-choice' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
                   onClick={() => setCurrentQuestion({
                     ...currentQuestion,
                     questionType: 'multiple-choice'
                   })}
                 >
-                  Multiple Choice
+                  <div className="flex items-center justify-center space-x-2">
+                    <span>🔘</span>
+                    <span>Multiple Choice</span>
+                  </div>
                 </button>
                 <button
-                  className={`px-3 py-1 rounded ${currentQuestion.questionType === 'sequence' ? 'bg-blue-500' : 'bg-gray-700'}`}
+                  className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
+                    currentQuestion.questionType === 'sequence' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
                   onClick={() => setCurrentQuestion({
                     ...currentQuestion,
                     questionType: 'sequence'
                   })}
                 >
-                  Sequence Order
+                  <div className="flex items-center justify-center space-x-2">
+                    <span>🔢</span>
+                    <span>Sequence Order</span>
+                  </div>
                 </button>
               </div>
               
@@ -308,18 +371,49 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
               </div>
               
               <div>
-                <label className="block text-blue-200">Options *</label>
-                <div className="space-y-2">
+                <label className="block text-blue-200 mb-2">
+                  Options * 
+                  {currentQuestion.questionType === 'sequence' && (
+                    <span className="text-sm text-gray-300 ml-2">(Drag to reorder)</span>
+                  )}
+                </label>
+                
+                {currentQuestion.questionType === 'sequence' && (
+                  <div className="mb-3 p-3 bg-blue-500/20 rounded-lg border border-blue-400/30">
+                    <p className="text-blue-200 text-sm">
+                      💡 <strong>Tip:</strong> Drag the cards to set the correct order. The numbers show the sequence.
+                    </p>
+                  </div>
+                )}
+                
+                <div className="space-y-3">
                   {currentQuestion.cards.map((card, idx) => (
-                    <div key={card.id} className="flex items-center space-x-2">
+                    <div 
+                      key={card.id} 
+                      className={`flex items-center space-x-2 p-3 rounded-lg bg-white/10 border-2 transition-all ${
+                        currentQuestion.questionType === 'sequence' 
+                          ? 'border-blue-400/50 hover:border-blue-400 cursor-move' 
+                          : 'border-transparent'
+                      } ${
+                        draggedIndex === idx ? 'opacity-50 scale-95' : ''
+                      }`}
+                      draggable={currentQuestion.questionType === 'sequence'}
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, idx)}
+                      onDragEnd={handleDragEnd}
+                    >
                       {currentQuestion.questionType === 'sequence' && (
-                        <span className="text-white w-6 h-6 flex items-center justify-center rounded bg-blue-500">
-                          {idx + 1}
-                        </span>
+                        <div className="flex flex-col items-center space-y-1">
+                          <span className="text-white w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 font-bold text-sm">
+                            {idx + 1}
+                          </span>
+                          <div className="text-xs text-gray-300">Drag</div>
+                        </div>
                       )}
                       
                       <input
-                        className="flex-1 p-2 rounded bg-white/20 text-white"
+                        className="flex-1 p-3 rounded-lg bg-white/20 text-white placeholder-gray-400 focus:bg-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         value={card.text}
                         onChange={e => updateCard(idx, e.target.value)}
                         placeholder={`Option ${idx + 1}`}
@@ -328,11 +422,12 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                       {currentQuestion.questionType === 'multiple-choice' && (
                         <button
                           onClick={() => setCorrectCard(idx)}
-                          className={`w-8 h-8 flex items-center justify-center rounded ${
+                          className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${
                             card.isCorrect 
-                              ? 'bg-green-500' 
-                              : 'bg-gray-600'
+                              ? 'bg-green-500 hover:bg-green-600' 
+                              : 'bg-gray-600 hover:bg-gray-500'
                           }`}
+                          title={card.isCorrect ? 'Correct answer' : 'Mark as correct'}
                         >
                           {card.isCorrect ? '✓' : ''}
                         </button>
@@ -340,7 +435,8 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                       
                       <button
                         onClick={() => removeCardOption(idx)}
-                        className="w-8 h-8 flex items-center justify-center bg-red-500/80 rounded"
+                        className="w-10 h-10 flex items-center justify-center bg-red-500/80 hover:bg-red-500 rounded-lg transition-all"
+                        title="Remove option"
                       >
                         ×
                       </button>
@@ -350,15 +446,16 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                   {currentQuestion.cards.length < 6 && (
                     <button
                       onClick={addCardOption}
-                      className="px-3 py-1 bg-blue-600 rounded text-white"
+                      className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition-all flex items-center justify-center space-x-2"
                     >
-                      + Add Option
+                      <span>+</span>
+                      <span>Add Option</span>
                     </button>
                   )}
                 </div>
                 
                 {errors.questions[step-2] && (
-                  <p className="text-red-400 text-sm mt-1">{errors.questions[step-2]}</p>
+                  <p className="text-red-400 text-sm mt-2 p-2 bg-red-500/20 rounded-lg">{errors.questions[step-2]}</p>
                 )}
               </div>
             </div>
@@ -366,53 +463,98 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
 
           {isLastStep() && (
             <div className="text-white">
-              <h4 className="text-2xl font-bold mb-4">Review Deck</h4>
+              <h4 className="text-xl sm:text-2xl font-bold mb-4">Review Deck</h4>
               
-              <div className="mb-4">
-                <p><strong>Title:</strong> {deck.title}</p>
-                <p><strong>Description:</strong> {deck.description}</p>
+              <div className="mb-6 p-4 bg-white/10 rounded-lg">
+                <p className="mb-2"><strong>Title:</strong> {deck.title}</p>
+                <p className="mb-2"><strong>Description:</strong> {deck.description}</p>
                 <p><strong>Theme:</strong> {THEME_FLAIRS.find(t => t.id === deck.theme)?.label}</p>
               </div>
               
               <div>
-                <h5 className="text-xl font-bold mb-2">Questions:</h5>
-                {deck.questions.map((q, idx) => (
-                  <div key={idx} className="mb-4 p-3 bg-white/10 rounded-lg">
-                    <p><strong>Q{idx + 1}:</strong> {q.prompt}</p>
-                    <p className="mt-2"><strong>Options:</strong></p>
-                    <ul className="list-disc pl-5 mt-1">
-                      {q.cards.map((card, cardIdx) => (
-                        <li 
-                          key={card.id} 
-                          className={card.isCorrect ? 'text-green-300' : ''}
-                        >
-                          {card.text}
-                          {card.isCorrect && ' ✓'}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+                <h5 className="text-lg sm:text-xl font-bold mb-4">Questions ({deck.questions.length}):</h5>
+                <div className="space-y-4">
+                  {deck.questions.map((q, idx) => (
+                    <div key={idx} className="p-4 bg-white/10 rounded-lg border border-white/20">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <span className="text-lg font-bold">Q{idx + 1}</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          q.questionType === 'sequence' 
+                            ? 'bg-blue-500/30 text-blue-300' 
+                            : 'bg-green-500/30 text-green-300'
+                        }`}>
+                          {q.questionType === 'sequence' ? '🔢 Sequence' : '🔘 Multiple Choice'}
+                        </span>
+                      </div>
+                      
+                      <p className="mb-3 text-gray-200">{q.prompt}</p>
+                      
+                      <div className="space-y-2">
+                        {q.questionType === 'sequence' ? (
+                          <div>
+                            <p className="text-sm text-blue-200 mb-2">Correct Order:</p>
+                            <div className="space-y-1">
+                              {q.cards
+                                .sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0))
+                                .map((card) => (
+                                <div key={card.id} className="flex items-center space-x-3 p-2 bg-blue-500/20 rounded">
+                                  <span className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-500 text-white text-sm font-bold">
+                                    {card.sequenceOrder}
+                                  </span>
+                                  <span className="text-white">{card.text}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-sm text-green-200 mb-2">Options:</p>
+                            <ul className="space-y-1">
+                              {q.cards.map((card, cardIdx) => (
+                                <li 
+                                  key={card.id} 
+                                  className={`flex items-center space-x-2 p-2 rounded ${
+                                    card.isCorrect 
+                                      ? 'bg-green-500/20 text-green-300' 
+                                      : 'bg-gray-500/20 text-gray-300'
+                                  }`}
+                                >
+                                  <span className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-600 text-white text-xs">
+                                    {String.fromCharCode(65 + cardIdx)}
+                                  </span>
+                                  <span>{card.text}</span>
+                                  {card.isCorrect && <span className="text-green-400">✓</span>}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        <div className="flex justify-between mt-4">
+        <div className="flex flex-col sm:flex-row justify-between gap-3 mt-6 pt-4 border-t border-white/20">
           <button 
             onClick={handleBack} 
-            className="px-4 py-2 bg-gray-600 text-white rounded"
+            className="w-full sm:w-auto px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all"
           >
-            {step === 1 ? 'Cancel' : 'Back'}
+            {step === 1 ? 'Cancel' : '← Back'}
           </button>
           
           <button
             onClick={handleNext}
-            className={`px-4 py-2 text-white rounded ${
-              isLastStep() ? 'bg-green-600' : 'bg-blue-600'
+            className={`w-full sm:w-auto px-6 py-3 text-white rounded-lg font-medium transition-all ${
+              isLastStep() 
+                ? 'bg-green-600 hover:bg-green-700' 
+                : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {isLastStep() ? 'Create Deck' : 'Next'}
+            {isLastStep() ? '✨ Create Deck' : 'Next →'}
           </button>
         </div>
       </div>

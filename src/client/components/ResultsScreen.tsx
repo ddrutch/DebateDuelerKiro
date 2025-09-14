@@ -198,7 +198,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
       <div className="md:w-1/4 flex flex-col">
         <div className="text-center mb-2">
           <h1 className="text-xl md:text-2xl font-bold text-white">
-            🎉 Game Complete!
+                Game Complete!
           </h1>
         </div>
         <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-sm rounded-xl p-2 flex-1 flex items-center justify-center">
@@ -276,7 +276,14 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
           onClick={onRestartGame}
           className="w-20 h-20 flex flex-col items-center justify-center bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-lg transition-all"
         >
-          <span className="text-xl">🔄</span>
+          {/* <span className="text-xl">🔄</span> */}
+          <span className="text-xl">
+              <img 
+                src="/ui/icons/arrow-rotate-right.svg" 
+                alt="Play Again" 
+                className="w-9 h-9 inline-block" 
+              />
+            </span>
           <span className="text-xs mt-1">Play Again</span>
         </button>
         
@@ -285,7 +292,14 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
           disabled={isAddingQuestion}
           className="w-20 h-20 flex flex-col items-center justify-center bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold rounded-lg transition-all"
         >
-          <span className="text-xl">➕</span>
+          {/* <span className="text-xl">➕</span> */}
+          <span className="text-xl">
+              <img 
+                src="/ui/icons/square-plus.svg" 
+                alt="Add Question" 
+                className="w-9 h-9 inline-block" 
+              />
+            </span>
           <span className="text-xs mt-1">Add Question</span>
         </button>
         
@@ -293,7 +307,13 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
           onClick={() => setIsCreateDeckModalOpen(true)}
           className="w-20 h-20 flex flex-col items-center justify-center bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white font-bold rounded-lg transition-all"
         >
-          <span className="text-xl">🎨</span>
+          <span className="text-xl">
+            <img 
+              src="/ui/icons/address-card.svg" 
+              alt="Create Deck" 
+              className="w-9 h-9 inline-block" 
+            />
+          </span>
           <span className="text-xs mt-1">Create Deck</span>
         </button>
 
@@ -303,7 +323,14 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
             onClick={onGoToAdminScreen}
             className="w-20 h-20 flex flex-col items-center justify-center bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold rounded-lg transition-all"
           >
-            <span className="text-xl">⚙️</span>
+            {/* <span className="text-xl">⚙️</span> */}
+            <span className="text-xl">
+              <img 
+                src="/ui/icons/toolbox.svg" 
+                alt="Admin" 
+                className="w-9 h-9 inline-block" 
+              />
+            </span>
             <span className="text-xs mt-1">Admin</span>
           </button>
         )}
@@ -360,14 +387,28 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                     placeholder={questionType === 'sequence' ? `Step ${idx + 1}` : `Option ${idx + 1}`}
                     className="flex-1 p-2 text-base rounded-lg bg-white/20 text-white placeholder-blue-300 border border-white/30 focus:outline-none"
                   />
-                  {questionType === 'multiple-choice' && (
+                  {questionType === 'multiple-choice' ? (
                     <button
                       onClick={() => setNewQuestion({ ...newQuestion, correctIndex: idx })}
                       className={`px-3 py-1 text-base rounded-lg ${newQuestion.correctIndex === idx ? 'bg-green-500 text-white' : 'bg-white/20 text-blue-200'}`}
                     >✓</button>
+                  ) : (
+                    <div className="flex items-center justify-center px-3 py-1 bg-indigo-600 text-white rounded-lg">
+                      <span className="text-sm font-medium">{idx + 1}</span>
+                    </div>
                   )}
                 </div>
               ))}
+              
+              {questionType === 'sequence' && (
+                <div className="col-span-1 sm:col-span-2 mt-2">
+                  <div className="bg-indigo-900/50 rounded-lg p-3 border border-indigo-500/30">
+                    <p className="text-blue-200 text-sm mb-2">
+                      <span className="text-yellow-300">ℹ️</span> For sequence questions, the order shown above (1-4) will be the correct order. Players will need to arrange the items in this sequence.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer Actions */}
