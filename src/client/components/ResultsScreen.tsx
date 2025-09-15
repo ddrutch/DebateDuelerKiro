@@ -4,13 +4,14 @@ import { sendToDevvit } from '../utils';
 import { useDevvitListener } from '../hooks/useDevvitListener';
 import { THEME_FLAIRS } from './comComponents/constants';
 import { CreateDeckWizard } from './comComponents/deckWizard';
+import { LiveBackground } from './LiveBackground';
 
 interface ResultsScreenProps {
   deck: Deck;
   playerSession: PlayerSession;
   onRestartGame: () => void;
-  onGoToAdminScreen: () => void; // New prop for admin screen navigation
-  isAdmin: boolean; // New prop to indicate admin status
+  onGoToAdminScreen: () => void; 
+  isAdmin: boolean;
 }
 
 export const ResultsScreen: React.FC<ResultsScreenProps> = ({
@@ -21,7 +22,6 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   isAdmin, // Destructure new prop
   }) => {
     const [showQuestionAddedFeedback, setShowQuestionAddedFeedback] = useState(false);
-    const [showCreateWizard, setShowCreateWizard] = useState(false);
     
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [isAddingQuestion, setIsAddingQuestion] = useState(false);
@@ -191,9 +191,10 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   };
 
   return (
-  <div className="h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-3 flex flex-col">
+  <div className="h-screen p-3 flex flex-col relative bg-transparent">
+    <LiveBackground isActive={true} />
     {/* Main content area with reduced gap */}
-    <div className="flex-grow flex flex-col md:flex-row gap-4 mb-2">
+    <div className="flex-grow flex flex-col md:flex-row gap-4 mb-2 relative z-10">
       {/* Player Score - Reduced size */}
       <div className="md:w-1/4 flex flex-col">
         <div className="text-center mb-2">
@@ -271,7 +272,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
     </div>
       
       {/* Action Buttons - Smaller and more compact */}
-      <div className="flex justify-center gap-3 pb-2">
+      <div className="flex justify-center gap-3 pb-2 relative z-10">
         <button
           onClick={onRestartGame}
           className="w-20 h-20 flex flex-col items-center justify-center bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-lg transition-all"

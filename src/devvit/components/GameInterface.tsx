@@ -1,12 +1,14 @@
 // src/components/MainScreen.tsx
 import { Devvit } from '@devvit/public-api';
-import { HeroButton } from './HeroButton'; // Assuming HeroButton is in the same 'components' directory
+import { HeroButton } from './HeroButton';
+import { Deck } from '../../shared/types/redditTypes';
 
 interface MainScreenProps {
   onPlayPress: () => void;
+  deck?: Deck;
 }
 
-export const MainScreen: Devvit.BlockComponent<MainScreenProps> = ({ onPlayPress }) => {
+export const MainScreen: Devvit.BlockComponent<MainScreenProps> = ({ onPlayPress, deck }) => {
   return (
     <zstack width="100%" height="100%" alignment="center middle">
       {/* Background */}
@@ -20,27 +22,10 @@ export const MainScreen: Devvit.BlockComponent<MainScreenProps> = ({ onPlayPress
         resizeMode="cover"
       />
 
-      {/* Bolt badge in top‑right, smaller */}
-      <zstack
-        width="100%"
-        height="100%"
-        alignment="top center"
-        padding="small"
-      >
-        {/* <image
-          url="bolt.png"
-          description="Bolt badge"
-          width="50px"
-          height="50px"
-          imageWidth="150px"
-          imageHeight="150px"
-          onPress={onBoltPress} // Use prop for onPress
-        /> */}
-      </zstack>
-
-      <vstack alignment="center" gap="none" padding="large" grow>
-        {/* Logo */}
-        <vstack width="100%" height="30%" alignment="top center">
+      {/* Main content stack */}
+      <vstack alignment="center" grow>
+        {/* Logo at the top-middle */}
+        <vstack alignment="top" height="100%" padding="small">
           <image
             url="logo.png"
             description="Logo"
@@ -51,18 +36,25 @@ export const MainScreen: Devvit.BlockComponent<MainScreenProps> = ({ onPlayPress
           />
         </vstack>
 
-        {/* Title / subtitle */}
-        <vstack height="30%" alignment="middle center" gap="medium">
-          <text size="xxlarge" weight="bold" outline="thick">
-            Debate Dueler
+        {/* Title at the top-middle */}
+        <vstack alignment="top center" height="15%">
+          <text size="xxlarge" weight="bold" outline="thick" color="white" alignment="center">
+            {deck?.title}
           </text>
         </vstack>
 
-        {/* HeroButton */}
-        <vstack height="40%" alignment="bottom center" gap="medium">
+        {/* Description in the middle */}
+        <vstack alignment="middle center" height="40%" padding="large">
+          <text size="large" weight="regular" color="white" alignment="center" wrap>
+            {deck?.description}
+          </text>
+        </vstack>
+
+        {/* HeroButton at the bottom */}
+        <vstack alignment="bottom center" height="25%">
           <HeroButton
-            label="Play the game!!"
-            onPress={onPlayPress} // Use prop for onPress
+            label="Start the Duel"
+            onPress={onPlayPress}
             animated
           />
         </vstack>

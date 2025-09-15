@@ -1,8 +1,5 @@
 import { Devvit } from '@devvit/public-api';
 
-
-
-
 interface HeroButtonProps {
   onPress?: () => void | Promise<void>;
   label: string;

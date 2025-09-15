@@ -39,10 +39,8 @@ export const AnswerCards: React.FC<AnswerCardsProps> = ({
   getPositionPercentage,
   getPositionTintStyle,
 }) => {
-  // Responsive grid layout - this remains flexible for different numbers of columns.
-  const gridClasses = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2';
 
-  // The root container now fills the height provided by its parent in GameScreen.
+  const gridClasses = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2';
   return (
     <div className="flex flex-col h-full w-full">
       {displayQuestion.questionType === 'sequence' ? (
@@ -91,23 +89,6 @@ export const AnswerCards: React.FC<AnswerCardsProps> = ({
           </div>
         ) : (
           <div className="flex flex-col gap-2 p-1 h-full">
-            {/* <div className="min-h-[4rem] bg-white/10 border border-white/20 rounded-lg p-2 flex-shrink-0">
-              <h3 className="text-blue-200 text-center mb-1 text-sm">Your Sequence:</h3>
-              <div className="flex flex-wrap gap-1 justify-center">
-                {Object.entries(sequenceOrder)
-                  .sort((a, b) => a[1] - b[1])
-                  .map(([cardId, order]) => {
-                    const card = displayQuestion.cards.find(c => c.id === cardId);
-                    return card ? (
-                      <div key={cardId} className="flex items-center bg-purple-600/50 border border-purple-400 rounded-full px-2 py-0.5">
-                        <span className="text-white mr-1 font-bold text-xs">{order}.</span>
-                        <span className="text-white text-xs">{card.text}</span>
-                        <button onClick={() => handleSequenceSelect(cardId)} className="ml-1 text-red-300 hover:text-red-100 text-xs">×</button>
-                      </div>
-                    ) : null;
-                  })}
-              </div>
-            </div> */}
             {/* The grid now grows to fill the remaining space */}
             <div className={`${gridClasses} flex-1`}>              
               {displayQuestion.cards.map(card => {
@@ -145,7 +126,6 @@ export const AnswerCards: React.FC<AnswerCardsProps> = ({
             const isSelected = selectedCardId === card.id;
             const pct = showResults ? getCardPercentage(card.id) : 0;
             const isCorrect = showResults && getCardCorrect(card.id);
-            // REMOVED min-h-[8rem] from baseClasses to allow cards to resize freely.
             const baseClasses = `relative flex items-center justify-between w-full h-full p-3 rounded-xl border-2 overflow-hidden transition-all`;
             let stateClasses = '';
             if (!showResults) {
@@ -167,7 +147,6 @@ export const AnswerCards: React.FC<AnswerCardsProps> = ({
                 {/* Responsive text size */}
                 <span className="relative flex-1 font-semibold text-left text-sm sm:text-base md:text-xl text-white">{card.text}</span>
                 {showResults && (
-                   // Responsive text size for results percentage
                   <div className="relative flex items-center space-x-2 text-sm sm:text-base">
                     <span className="font-bold text-white">{pct}%</span>
                     {isCorrect && <span className="text-xl text-green-400">✓</span>}

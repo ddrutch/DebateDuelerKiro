@@ -3,9 +3,6 @@ import { createRedisService } from './redisService.js';
 import { Preview } from './Preview.js';
 import { Deck } from '../shared/types/redditTypes.js';
 
-
-
-
 export async function createNewPost(postData : Deck , context: Devvit.Context) {
     const { reddit, ui } = context;
     const subreddit = await reddit.getCurrentSubreddit();

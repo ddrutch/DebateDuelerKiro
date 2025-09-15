@@ -1,24 +1,12 @@
-import { Devvit, Post, useWebView } from '@devvit/public-api';
+import { Devvit, useAsync , useWebView } from '@devvit/public-api';
 import { BlocksToWebviewMessage, WebviewToBlockMessage } from '../shared/types/redditTypes';
 import { createRedisService } from './redisService';
 import { createNewPost as createNewPostUtil } from './createNewPost';
-import { defineConfig } from '@devvit/server';
 import { getDefaultDeck } from '../server/core/decks';
 import { Preview } from './Preview';
 import { Question } from '../shared/types/redditTypes';
-import { HeroButton } from './components/HeroButton';
-
 import { MainScreen } from './components/GameInterface'; // Imp
-// ort your new component
 
-
-
-// defineConfig({
-//   name: '[Bolt] Debate Dueler',
-//   entry: 'index.html',
-//   height: 'tall',\
-//   menu: { enable: false },
-// });
 
 /**
  * Randomly shuffles an array using the Fisher-Yates (Knuth) algorithm.
@@ -43,7 +31,6 @@ function shuffle(array: any[]) {
   return array;
 }
 
-
 Devvit.addMenuItem({
   label: 'Create Debate Dueler Post',
   location: 'subreddit',
@@ -65,8 +52,21 @@ Devvit.addMenuItem({
 Devvit.addCustomPostType({
   name: 'Dueler',
   height: 'tall',
-  render:  (context) => { 
+  render:  (context) => {
+
+    const { data: deck } = useAsync(async () => {
+      const redisService = createRedisService(context);
+      const redisDeck = await redisService.getDeck(context.postId!);
+      if (redisDeck) {
+        return redisDeck;
+      } else {
+        await redisService.saveDeck(context.postId!, getDefaultDeck());
+        return getDefaultDeck();
+      }
+    }, { depends: [context.postId ?? ''] });
+
     const { mount } = useWebView<WebviewToBlockMessage, BlocksToWebviewMessage>({
+
       onMessage: async (event, { postMessage }) => {
         console.log('Received message', event);
         const data = event as unknown as WebviewToBlockMessage;
@@ -76,17 +76,12 @@ Devvit.addCustomPostType({
         const playerSession = await redisService.getPlayerSession(context.postId!, context.userId!);
         const leaderboard = await redisService.getLeaderboard(context.postId!);
 
-        
         const user = await context.reddit.getCurrentUser();
-        //const isAdmin = user?.isAdmin ?? false;
-        // const = user?.modPermissions?.get(subredditName)?.length > 0 ?? false;
 
         const subredditName = await context.reddit.getCurrentSubredditName();
         // const isAdmin =
         //   (user?.modPermissions?.get(subredditName)?.length ?? 0) > 0 ;
 
-        
-        
         let isAdmin = false;
         const permissions = await user?.getModPermissionsForSubreddit(subredditName);
         if (permissions && permissions.length > 0) {
@@ -235,8 +230,8 @@ Devvit.addCustomPostType({
     
     return (
       <MainScreen
-            onPlayPress={mount}
-            
+            onPlayPress={mount}  
+            deck={deck ?? getDefaultDeck()}
       />
     );
   },

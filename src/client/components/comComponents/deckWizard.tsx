@@ -9,13 +9,13 @@ interface DeckData {
   customTheme: string;
   flairCSS: string;
   questions: Question[];
-  questionStats: [], // Added
+  questionStats: [], 
 }
 
 interface CreateDeckWizardProps {
   onClose: () => void;
   onSubmit: (deck: Deck) => void;
-  username: string; // Add this line
+  username: string;
   userID : string ;
 }
 
@@ -35,7 +35,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
     flairCSS: 'battles-flair',
     customTheme: '',
     questions: [],
-    questionStats: [], // Added
+    questionStats: [],
   });
 
 
@@ -46,7 +46,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
     sequenceOrder
   });
 
-  // Initialize a question with proper GameCard objects
+
   // Initialize a question with proper GameCard objects
   const initializeQuestion = (): Question => ({
     id: `temp_${Date.now()}`,
@@ -140,7 +140,6 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
         theme: deck.theme,
         flairCSS: safeFlair.cssClass,
         questions: deck.questions,
-        //flairText: deck.title.trim(),
         flairText: safeFlair.label,
         creatorID : userID,
         createdBy: username ,
@@ -282,6 +281,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                   value={deck.title}
                   onChange={e => setDeck({ ...deck, title: e.target.value })}
                   placeholder="Enter deck title"
+                  maxLength={30}
                 />
                 {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
               </div>
@@ -294,6 +294,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                   onChange={e => setDeck({ ...deck, description: e.target.value })}
                   placeholder="Describe your deck"
                   rows={3}
+                  maxLength={120}
                 />
                 {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
               </div>
@@ -367,13 +368,13 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                     prompt: e.target.value 
                   })}
                   placeholder="Enter your question"
+                  maxLength={200}
                 />
               </div>
               
               <div>
                 <label className="block text-blue-200 mb-2">
-                  Options * 
-                  {currentQuestion.questionType === 'sequence' && (
+                  Options * {currentQuestion.questionType === 'sequence' && (
                     <span className="text-sm text-gray-300 ml-2">(Drag to reorder)</span>
                   )}
                 </label>
@@ -417,6 +418,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                         value={card.text}
                         onChange={e => updateCard(idx, e.target.value)}
                         placeholder={`Option ${idx + 1}`}
+                        maxLength={30}
                       />
                       
                       {currentQuestion.questionType === 'multiple-choice' && (

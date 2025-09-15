@@ -24,7 +24,6 @@ const calculateLocalScore = (
   const answer = answers.find(a => a.questionId === question.id);
   if (!answer) return 0;
 
-  // NEW: Consistent baseTimeBonus
   const baseTimeBonus = Math.max(0, answer.timeRemaining);
 
   if (question.questionType === 'sequence') {
@@ -46,7 +45,6 @@ const calculateLocalScore = (
       const accuracy = correctPositions / correctSequence.length;
       return Math.round(accuracy * 100) + baseTimeBonus;
     } else {
-      // CORRECTED: Use positionStats for conformist/contrarian sequence scoring
       if (!questionStats.positionStats) return 0;
 
       let totalPct = 0;
@@ -66,7 +64,6 @@ const calculateLocalScore = (
       }
     }
   } else {
-    // Existing logic for non-sequence questions remains the same
     const cardId = answer.answer as string;
     if (scoringMode === 'trivia') {
       const card = question.cards.find(c => c.id === cardId);
@@ -174,7 +171,6 @@ export const DebateDueler: React.FC = () => {
             setPlayerSession(parsedState.playerSession);
             setLocalAnswers(parsedState.localAnswers);
             setLocalScore(parsedState.localScore);
-            //setCurrentQuestionStats(parsedState.currentQuestionStats);
           } else {
             localStorage.removeItem(LOCAL_STORAGE_KEY);
           }
@@ -219,7 +215,6 @@ export const DebateDueler: React.FC = () => {
         playerSession,
         localAnswers,
         localScore,
-        //currentQuestionStats
       };
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
     }
@@ -462,11 +457,11 @@ export const DebateDueler: React.FC = () => {
           deck={deck}
           playerSession={displaySession!}
           onRestartGame={restartGame}
-          onGoToAdminScreen={goToAdminScreen} // Pass the new prop
-          isAdmin={isAdmin} // Pass isAdmin status
+          onGoToAdminScreen={goToAdminScreen} 
+          isAdmin={isAdmin} 
         />
       );
-    case 'admin': // New case for admin screen
+    case 'admin': 
       return (
         <AdminScreen
           deck={deck}

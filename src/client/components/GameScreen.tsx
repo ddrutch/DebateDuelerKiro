@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AnswerCards } from './AnswerCards';
+import { LiveBackground } from './LiveBackground';
 import { 
   Deck, 
   PlayerSession, 
@@ -381,8 +382,43 @@ const getTintStyle = (cardId: string) => {
 
 
 
+  // Calculate background properties based on game state
+  const backgroundProps = useMemo(() => {
+    if (!displayQuestion) {
+      return { isActive: true };
+    }
+
+    const isContrarian = playerSession.scoringMode === 'contrarian';
+    const isCorrect = selectedCardId ? getCardCorrect(selectedCardId) : false;
+    const isTrivia = playerSession.scoringMode === 'trivia';
+    const percentage = selectedCardId ? getCardPercentage(selectedCardId) : 0;
+    
+    let backgroundColor = '';
+
+    if (selectedCardId) {
+      if (isTrivia) {
+        backgroundColor = isCorrect ? 'rgba(0, 100, 0, 0.7)' : 'rgba(100, 0, 0, 0.7)';
+      } else {
+        const hue = isContrarian 
+          ? 120 * (percentage / 100) // red to green
+          : 120 * (1 - (percentage / 100)); // green to red
+        backgroundColor = `hsla(${hue}, 70%, 30%, 0.8)`;
+      }
+    }
+
+    return { 
+      isActive: true,
+      showResults,
+      glowColor: backgroundColor,
+      percentage: percentage,
+      isContrarian: isContrarian,
+    };
+  }, [displayQuestion, selectedCardId, showResults, playerSession.scoringMode]);
+
   return (
-    <div className="h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden relative">
+      {/* Live Background */}
+      <LiveBackground {...backgroundProps} />
       {/* Top Bar */}
       <div className="flex justify-between items-center px-[clamp(.5rem,2vw,1rem)] py-[clamp(.25rem,1vw,.75rem)]">
         <div className="text-white">
@@ -446,9 +482,6 @@ const getTintStyle = (cardId: string) => {
           )}
           {/* The new animated cue */}
           <div
-            //className="absolute bottom-0 right-0 w-4 h-4 bg-white/40 rounded-br-xl animate-pulse"
-            //className="absolute bottom-0 right-0 w-12 h-1 bg-white/40 rounded-full animate-pulse"
-            //className="absolute bottom-0 right-0 w-4 h-4 bg-white/40 rounded-br-xl animate-pulse"
             className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-white/40 rounded-br-xl animate-pulse"
 
 

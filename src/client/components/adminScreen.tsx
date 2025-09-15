@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Deck, Question, PlayerSession, GameCard } from '../../shared/types/redditTypes'; // Import GameCard
-import { sendToDevvit } from '../utils.js'; // Added .js extension
+import { sendToDevvit } from '../utils.js';
 
 interface AdminScreenProps {
   deck: Deck;
-  playerSession: PlayerSession; // To check if the user is the deck creator or admin
+  playerSession: PlayerSession; 
   onBackToResults: () => void;
   isAdmin : boolean
 }
@@ -21,7 +21,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   const [showFeedback, setShowFeedback] = useState<string | null>(null);
 
   // Check if the current user is the deck creator or an admin
-  const isCreatorOrAdmin = playerSession.userId === deck.creatorID || isAdmin; // Assuming isAdmin is on playerSession
+  const isCreatorOrAdmin = playerSession.userId === deck.creatorID || isAdmin;
 
   if (!isCreatorOrAdmin) {
     return (
