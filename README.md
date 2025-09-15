@@ -1,7 +1,7 @@
 # Debate Dueler
 
 try out link:
-[https://youtu.be/6vQ78WdpzLI](https://www.reddit.com/r/debateDuelerKiro/comments/1nhm3ke/neighborly_boundaries_aita_advice_by_drutcher/)
+[(https://www.reddit.com/r/debateDuelerKiro/comments/1nhm3ke/neighborly_boundaries_aita_advice_by_drutcher/)](https://www.reddit.com/r/debateDuelerKiro/comments/1nhm3ke/neighborly_boundaries_aita_advice_by_drutcher/)
 
 An interactive, real-time quiz game built for Reddit using Devvit, featuring dynamic scoring mechanics, live backgrounds, and community-driven content creation. Players compete in themed debates with unique strategies while experiencing immersive visual feedback.
 
