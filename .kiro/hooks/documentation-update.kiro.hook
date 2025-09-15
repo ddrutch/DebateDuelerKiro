@@ -1,0 +1,31 @@
+{
+  "enabled": true,
+  "name": "Documentation Auto-Update",
+  "description": "Automatically updates documentation when source code changes, ensuring docs stay in sync with the codebase",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.tsx",
+      "src/**/*.ts",
+      "!src/**/*.test.ts",
+      "!src/**/*.spec.ts",
+      "!**/node_modules/**"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "I noticed you've made changes to source files in the Debate Dueler project. I'll help keep the documentation up to date.
+
+1. First, I'll analyze the changed files to understand what functionality was added, modified, or removed
+2. Then I'll check the relevant documentation files (like client-components.md, devvit-backend.md, etc.)
+3. I'll update the documentation to reflect the changes, including:
+   - New components or functions added
+   - Modified APIs or interfaces
+   - Updated component props or behavior
+   - New features or capabilities
+4. I'll ensure the documentation follows the existing style and structure
+
+Please provide a summary of the changes you made so I can update the documentation accordingly. If you have specific documentation files you'd like me to focus on, let me know!"
+  }
+}

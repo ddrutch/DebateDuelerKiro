@@ -1,0 +1,36 @@
+{
+  "enabled": true,
+  "name": "Performance Monitoring",
+  "description": "Monitors bundle size, file sizes, and suggests performance optimizations when thresholds are exceeded",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.css",
+      "package.json",
+      "!**/node_modules/**"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "I detected changes that might impact performance. Let me analyze the current state and suggest optimizations.
+
+1. First, I'll check the bundle size and compare it to previous builds
+2. I'll analyze the changed files for potential performance issues:
+   - Large components that could be split
+   - Heavy imports that could be lazy-loaded
+   - Inefficient algorithms or data structures
+   - Missing memoization opportunities
+   - Bundle size increases
+3. I'll suggest specific performance improvements like:
+   - Code splitting and lazy loading
+   - Memoization with useMemo/useCallback
+   - Optimizing images or assets
+   - Reducing bundle size
+   - Improving rendering performance
+
+Would you like me to run a build analysis and suggest specific performance optimizations for the Debate Dueler app? I can focus on client-side performance, server-side efficiency, or both."
+  }
+}

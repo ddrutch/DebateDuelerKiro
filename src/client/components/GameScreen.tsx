@@ -471,8 +471,13 @@ const getTintStyle = (cardId: string) => {
         <div 
           onClick={() => setIsQuestionExpanded(true)}
           className="relative cursor-pointer bg-white/10 backdrop-blur-sm rounded-xl p-[clamp(.5rem,2vw,1rem)] mx-[clamp(.5rem,2vw,1rem)] mb-[clamp(.5rem,1vw,1rem)] transition-all hover:bg-white/20"
+          // Add these new Tailwind classes
+          style={{
+            maxHeight: '20vh', // Adjust this value as needed
+            overflowY: 'hidden',
+          }}
         >
-          <h2 className="text-white font-bold text-center text-[clamp(1rem,4vw,2rem)] leading-tight">
+          <h2 className="text-white font-bold text-center text-[clamp(1rem,2vw,1rem)] leading-tight">
             {displayQuestion?.prompt}
           </h2>
           {displayQuestion?.authorUsername && (
@@ -483,11 +488,10 @@ const getTintStyle = (cardId: string) => {
           {/* The new animated cue */}
           <div
             className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-white/40 rounded-br-xl animate-pulse"
-
-
           />
         </div>
-       </div>
+      </div>
+
 
       {/* Pop-up Overlay */}
       {isQuestionExpanded && (
@@ -505,7 +509,7 @@ const getTintStyle = (cardId: string) => {
           >
             {/* Main Question Text */}
             <div className="flex-grow overflow-y-auto w-full p-4">
-              <h2 className="text-white font-bold text-center text-[clamp(1.5rem,6vw,3rem)] leading-tight mb-4">
+              <h2 className="text-white font-bold text-center text-[clamp(1rem,4vw,2rem)] leading-tight mb-4">
                 {displayQuestion?.prompt}
               </h2>
               {displayQuestion?.authorUsername && (

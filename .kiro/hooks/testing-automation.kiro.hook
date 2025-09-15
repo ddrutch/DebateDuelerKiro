@@ -1,0 +1,30 @@
+{
+  "enabled": true,
+  "name": "Testing Automation",
+  "description": "Automatically runs tests and suggests test updates when TypeScript source files are modified",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "!src/**/*.test.ts",
+      "!src/**/*.spec.ts",
+      "!**/node_modules/**"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "I detected changes to TypeScript source files in the Debate Dueler project. Let me help ensure the code is properly tested.
+
+1. First, I'll run the existing test suite to make sure nothing is broken
+2. Then I'll analyze the changes you made to identify:
+   - New functions or methods that need tests
+   - Modified logic that might require test updates
+   - Edge cases that should be covered
+3. I'll suggest specific test cases to add or update
+4. I'll ensure tests follow the project's testing patterns and conventions
+
+Would you like me to run the tests first, or would you prefer to review the changes and suggest specific test improvements? Let me know what aspects of testing you'd like me to focus on!"
+  }
+}

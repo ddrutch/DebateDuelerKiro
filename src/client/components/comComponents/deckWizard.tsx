@@ -281,7 +281,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                   value={deck.title}
                   onChange={e => setDeck({ ...deck, title: e.target.value })}
                   placeholder="Enter deck title"
-                  maxLength={30}
+                  maxLength={120}
                 />
                 {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
               </div>
@@ -294,7 +294,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                   onChange={e => setDeck({ ...deck, description: e.target.value })}
                   placeholder="Describe your deck"
                   rows={3}
-                  maxLength={120}
+                  maxLength={400}
                 />
                 {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
               </div>
@@ -368,7 +368,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                     prompt: e.target.value 
                   })}
                   placeholder="Enter your question"
-                  maxLength={200}
+                  maxLength={450}
                 />
               </div>
               
@@ -418,7 +418,7 @@ export const CreateDeckWizard: React.FC<CreateDeckWizardProps> = ({ onClose, onS
                         value={card.text}
                         onChange={e => updateCard(idx, e.target.value)}
                         placeholder={`Option ${idx + 1}`}
-                        maxLength={30}
+                        maxLength={120}
                       />
                       
                       {currentQuestion.questionType === 'multiple-choice' && (

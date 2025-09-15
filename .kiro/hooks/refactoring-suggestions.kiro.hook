@@ -1,0 +1,34 @@
+{
+  "enabled": true,
+  "name": "Refactoring Suggestions",
+  "description": "Analyzes code complexity and suggests refactoring opportunities when functions become too long or complex",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "!**/node_modules/**"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "I noticed you've been working on some code files. Let me analyze the code for potential refactoring opportunities to improve maintainability and readability.
+
+1. First, I'll examine the changed files for functions that might be too long (>50 lines) or complex
+2. I'll look for code smells like:
+   - Functions with multiple responsibilities
+   - Deeply nested conditionals
+   - Large switch statements
+   - Repeated code patterns
+   - Complex expressions that could be extracted
+3. I'll suggest specific refactoring techniques like:
+   - Extracting smaller functions
+   - Using early returns
+   - Creating utility functions
+   - Breaking down complex components
+   - Improving variable naming
+
+Would you like me to analyze the current code complexity and suggest specific refactoring improvements? I can focus on particular files or functions if you have concerns about specific areas."
+  }
+}
